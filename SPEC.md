@@ -1,8 +1,6 @@
-# OPF v0.2.0 — Open Product Format
+# OPF v0.2.1 — Open Product Format
 
 **An additive profile of OKF v0.2.** Every OPF document preserves OKF provenance and trust. OKF renderers may ignore OPF fields and still display the documents.
-
-OPF is the product-definition face of the Eidos format family:
 
 ```text
 OKF — knowledge and trust
@@ -11,19 +9,19 @@ ORF — approved research and graded findings
 OPF — product commitments, experience, slices, and proof
 ```
 
-OPF composes these formats; it does not merge them. Human intent remains an EMF document. Research remains an ORF pack. OPF links both into an accountable product definition.
+OPF composes these formats; it does not merge them. Human intent remains an EMF document. Research remains an ORF pack. OPF links pinned revisions of both into an accountable product definition.
 
 ## 1. Why OPF exists
 
 | Observed failure | OPF rule |
 |---|---|
 | A PRD becomes a confident wall of prose | Product concepts are atomic documents with stable IDs and typed edges |
-| Human intent is replaced by an agent paraphrase | Product faces link EMF intent; they do not impersonate it |
-| Research is cited selectively or forgotten | Product commitments link the ORF/OKF evidence that supports them |
-| Existing systems get rebuilt because boundaries are vague | Authority boundaries and non-goals are required before building |
-| A roadmap contains activity but no falsifiable outcome | Every building product names outcomes, a first slice, and proof |
-| UX arrives as screenshots after engineering | Journeys, surfaces, states, interactions, accessibility, and content are first-class concepts |
-| Large product corpora accumulate disconnected pages | IDs are unique, internal references resolve, and every concept connects to the product face |
+| Human intent is replaced by an agent paraphrase | Product faces link pinned EMF intent; they do not impersonate it |
+| Research is cited selectively or forgotten | Product commitments link pinned ORF/OKF evidence |
+| Existing systems get rebuilt because boundaries are vague | Authority boundaries and non-goals are required before shaping |
+| A roadmap contains activity but no falsifiable outcome | Every active product names outcomes, one first slice, and acceptance proof |
+| UX arrives as screenshots after engineering | The first slice contains a mechanically complete experience path |
+| Large product corpora accumulate connected sludge | Only directed composition edges make documents members of the product definition |
 
 ## 2. Unit of distribution
 
@@ -35,27 +33,27 @@ docs/opf/
   log.md                   # append-only product-definition history
   concepts/                # atomic product and UX concepts
     *.md
-  evidence/                # optional extracts; prefer ORF/OKF links
+  evidence/                # optional extracts; prefer pinned ORF/OKF links
 ```
 
-Folders aid navigation; typed IDs and references define the graph. A 100-document product remains one pack when it has one promise and authority boundary. Split a component into another pack when it can be governed, versioned, or retired independently.
+Folders aid navigation; IDs and typed references define the graph. A 100-document product remains one pack when it has one promise and authority boundary. Split a component when it can be governed, versioned, or retired independently. Cross-pack targets must be declared in the face's `imports` closure.
 
 ## 3. Product face
 
 ```yaml
 ---
 okf_version: "0.2"
-opf_version: "0.2.0"
+opf_version: "0.2.1"
 profile: opf
 type: product
 opf_id: opf:eam:product
 title: "Eidos Agent Manager"
 status: shaping
-intent: [emf:eam:executive-office]
-research: [orf:eam:manager-study]
+imports: [emf:eam@2026-08-07]
+intent: [emf:eam:executive-office@2026-08-07]
 users: [opf:eam:user:daniel]
-problem: "Agent capacity exceeds the human ability to coordinate it."
-promise: "Show Daniel what needs his judgment while assistants handle the rest."
+problem: opf:eam:problem:coordination
+promise: opf:eam:promise:executive-office
 outcomes: [opf:eam:outcome:protect-attention]
 first_slice: opf:eam:slice:first-orientation
 non_goals: ["ambient surveillance", "replacing native lifecycle authorities"]
@@ -69,13 +67,22 @@ verified:
 ---
 ```
 
-### Lifecycle
+`problem` and `promise` are references, not duplicate inline authorities. Their documents may evolve and retain provenance independently.
 
-`concept | shaping | validated | building | operating | retired`
+### Lifecycle gates
 
-`shaping` and later require attributed intent, users, problem, promise, outcomes, first slice, explicit non-goals, proof, and authority boundaries. Lifecycle is not percent complete; it records the product's epistemic and operating state.
+| status | mechanical meaning |
+|---|---|
+| `concept` | named product face; incomplete structure allowed |
+| `shaping` | intent, users, problem, promise, outcomes, first slice, non-goals, proof, and authority resolve; first experience path is complete |
+| `validated` | shaping plus `validation` pointing to at least one `acceptance` with `status: observed` and pinned evidence |
+| `building` | shaping contract admitted for implementation; the first slice remains complete and falsifiable |
+| `operating` | building contract plus `operational_proof` pointing to observed acceptance |
+| `retired` | `retirement_reason` required; historical product declarations remain readable |
 
-## 4. Atomic concepts
+Lifecycle is not percent complete. Placeholder values such as `TBD`, `TODO`, or `later` do not satisfy admission.
+
+## 4. Atomic concepts and IDs
 
 Every non-face document uses:
 
@@ -83,69 +90,121 @@ Every non-face document uses:
 type: product-concept
 opf_id: opf:<product>:<kind>:<slug>
 kind: surface
-serves: [opf:<product>:outcome:<slug>]
 ```
 
-Allowed `kind` values in v0.2.0:
+Allowed `kind` values:
 
 `user`, `problem`, `promise`, `outcome`, `journey`, `moment`, `surface`, `state`, `interaction`, `content`, `accessibility`, `capability`, `contract`, `constraint`, `authority-boundary`, `slice`, `acceptance`, `decision`, and `risk`.
 
-One document should make one product assertion someone could dispute, supersede, implement, or test. Do not split prose merely to increase document count.
+IDs match `opf:<product>:<kind>:<slug>` (additional stable segments are allowed), are unique in the validation closure, and never change after publication. A new interpretation gets a new ID and explicit `supersedes`; the old document names the new ID in `superseded_by`. Both edges are required, kinds must match, and one lineage may have only one live head.
 
-## 5. UX is product definition
+One document makes one product assertion someone could dispute, supersede, implement, or test. Do not split prose merely to increase document count.
 
-The experience chain is explicit:
+## 5. Directed typed edges
+
+Field names are edge types. The validator checks both direction and target kind. Examples:
+
+| source field | required target kind |
+|---|---|
+| `users` / `actor` | `user` |
+| `problem` | `problem` |
+| `promise` | `promise` |
+| `outcomes` / `outcome` | `outcome` |
+| `first_slice` | `slice` |
+| `proof`, `covered_by`, `validation`, `operational_proof` | `acceptance` |
+| `authority` | `authority-boundary` |
+| `moments` | `moment` |
+| `on_surface`, `surfaces`, `of_surface` | `surface` |
+| `states` | `state` |
+| `allows`, `interactions` | `interaction` |
+
+Composition edges flow out from the face and from admitted product structures. Grounding and back-reference fields such as `serves`, `actor`, and `of_surface` do not make an otherwise disconnected document part of the product. This prevents a risk or note from passing merely because it points at a valid outcome.
+
+## 6. UX is product definition
+
+The minimum experience path is:
 
 ```text
-user -> outcome -> journey -> moment -> surface -> state -> interaction -> proof
+user -> outcome -> journey -> moment -> surface -> state -> interaction -> outcome/proof
 ```
 
-A `surface` must link `serves`, `states`, and `proof`. A screenshot may support a surface document but never replaces its states, behavior, accessibility, or acceptance evidence.
+| kind | required semantics |
+|---|---|
+| `journey` | `actor`, `outcome`, and ordered `moments` |
+| `moment` | `in_journey` and `on_surface` |
+| `surface` | `surface_kind`, `serves`, `states`, and `proof` |
+| `state` | `of_surface` plus `allows`, or `terminal: true` |
+| `interaction` | `on`, `yields`, and `proof` or `covered_by` |
+| `content` | `appears_on` |
+| `accessibility` | `applies_to` and a nonempty `requirement` |
 
-OPF permits multiple projections over the same graph:
+`surface_kind` is one of `screen`, `api`, `physical-control`, `device-output`, `voice`, `notification`, `document`, or `service`. This permits mobile, software, services, and physical products without storing design-system components in OPF.
 
-- executive: promise, outcomes, risks, and decisions;
-- product: users, journeys, capabilities, and slices;
-- design: moments, surfaces, states, interactions, content, and accessibility;
-- engineering: contracts, constraints, authority, dependencies, and acceptance;
-- agent: the smallest mission-scoped projection needed for the assigned work.
+Screenshots, Figma frames, CAD files, copy decks, analytics events, sensor logs, and WCAG audit bodies remain in their native systems. OPF records the product commitment and typed pointer, not the full artifact.
 
-## 6. Slices and proof
+## 7. Slices and acceptance
 
-A `slice` must declare:
+A `slice` declares:
 
 - `serves`: outcomes it advances;
-- `includes`: concepts it delivers;
+- `includes`: product concepts it delivers;
 - `proof`: acceptance concepts that can fail;
 - `non_goals`: tempting adjacent scope it excludes.
 
-The first slice is the smallest end-to-end product behavior that tests the promise. A component list or scaffold is not a slice.
+The face names exactly one `first_slice`. That slice must include a journey whose directed path resolves through moment, surface, state, and interaction to the declared journey outcome, with acceptance proof on the surface or interaction path. A component list or deployed scaffold does not satisfy this gate.
 
-## 7. Graph integrity
+Acceptance documents require:
 
-- Every `opf_id` is stable and unique within the pack.
-- Every internal `opf:` reference resolves.
-- Every concept connects to the product face through at least one typed reference.
-- EMF and ORF references are external edges and remain governed by their source profiles.
-- Conflicting concepts remain separate and link to a decision; last-write-wins is not product reasoning.
+```yaml
+kind: acceptance
+condition: "A falsifiable sentence"
+status: proposed       # proposed | observed | failed
+evidence: [orf:pack:finding@revision]  # required for observed or failed
+```
 
-## 8. Conformance
+Evidence records an observation; it does not convert product direction into fact.
 
-- Every document declares `okf_version: "0.2"` and `opf_version: "0.2.0"`.
-- `opf_version` major.minor matches `okf_version`.
+## 8. External references
+
+External references are pinned strings:
+
+```text
+emf:<pack>:<object>@<revision>
+orf:<pack>:<object>@<revision>
+okf:<pack>:<object>@<revision>
+```
+
+The product face declares the closure:
+
+```yaml
+imports: [emf:eam@2026-08-07, orf:manager-study@a1b2c3d]
+```
+
+`intent` accepts EMF only. `research` accepts ORF only. `evidence` accepts ORF or OKF. Draft validation warns on unpinned or undeclared externals; `--strict` fails. v0.2.1 validates declared pins but does not fetch remote packs.
+
+## 9. Validation modes and parser
+
+Default mode is draft: all local structure, target kinds, directed reachability, lifecycle, experience, and supersession rules apply; external pin/import defects warn.
+
+`--strict` additionally turns every warning into an error and requires all external references to be pinned and imported. Strict validation is the publication gate.
+
+The validator accepts only the documented YAML subset: scalar values, inline scalar lists, indented scalar lists, and nested maps such as `verified`. Duplicate keys, tabs, multiline scalars, inline maps, lists of maps, and malformed lines fail closed. This restriction keeps the validator dependency-free and deterministic.
+
+## 10. Conformance
+
+- Every document declares `okf_version: "0.2"` and an OPF version on the `0.2.x` line.
 - `index.md` uses `type: product`; other OPF documents use `type: product-concept`.
-- Required lifecycle, slice, and surface gates pass.
-- Stable IDs, resolvable references, and graph connectivity pass.
-- Every document carries OKF `verified.by` and a non-empty `verified.method`.
-
-Validate with:
+- Lifecycle, target-kind, first-slice, UX, acceptance, supersession, and parser gates pass.
+- IDs are unique, internal references resolve, and every concept is reachable through directed composition edges.
+- Every document carries OKF `verified.by` and a nonempty `verified.method`.
+- Strict validation has no warnings.
 
 ```bash
 python3 -m opf.validate --strict path/to/pack
 ```
 
-## 9. Placement and scope
+## 11. Placement and boundaries
 
-OPF is a format, not a global product database. The default home is `docs/opf/` in the product repository. This repository ships the specification, validator, and examples; it is not the organization's product warehouse.
+OPF is a format, not a global product database, issue tracker, roadmap application, design tool, analytics store, runtime system, or execution log. The default home is `docs/opf/` in the product repository. This repository ships the specification, validator, fixtures, and examples; it is not the organization's product warehouse.
 
-OPF does not define project scheduling, issue tracking, design-file storage, lifecycle execution, or an application UI. Those systems may consume or link OPF.
+Issue trackers execute work. Design tools hold design artifacts. Runtime systems own live state. EMF owns human intent. ORF owns research. OPF owns the product commitments and typed links connecting those authorities.

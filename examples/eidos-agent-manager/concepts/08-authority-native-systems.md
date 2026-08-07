@@ -1,6 +1,6 @@
 ---
 okf_version: "0.2"
-opf_version: "0.2.0"
+opf_version: "0.2.1"
 type: product-concept
 opf_id: opf:eam:authority:native-systems
 kind: authority-boundary

@@ -1,12 +1,12 @@
 ---
 okf_version: "0.2"
-opf_version: "0.2.0"
+opf_version: "0.2.1"
 type: product-concept
 opf_id: opf:eam:slice:first-orientation
 kind: slice
 title: "One goal, one mission, two tree bindings, one executive orientation"
 serves: [opf:eam:outcome:protect-attention]
-includes: [opf:eam:journey:executive-orientation, opf:eam:surface:executive-brief, opf:eam:state:conflicting]
+includes: [opf:eam:journey:executive-orientation]
 proof: [opf:eam:acceptance:decision-brief]
 non_goals: ["tree mutation", "attention ranking", "ambient telemetry"]
 verified:

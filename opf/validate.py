@@ -1,11 +1,13 @@
-"""Validate Open Product Format v0.2.0 documents and packs.
+"""Validate Open Product Format v0.2.1 documents and packs.
 
-Stdlib only. The parser intentionally supports the small YAML subset OPF uses.
+Stdlib only. The parser accepts the deliberately small YAML subset OPF specifies
+and fails closed on syntax it cannot represent faithfully.
 """
 
 from __future__ import annotations
 
 import argparse
+import csv
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -38,23 +40,98 @@ KINDS = {
 }
 STATUSES = {"concept", "shaping", "validated", "building", "operating", "retired"}
 TIERS = {"human", "job", "agent"}
-REF_FIELDS = {
-    "intent",
-    "research",
+SURFACE_KINDS = {
+    "screen",
+    "api",
+    "physical-control",
+    "device-output",
+    "voice",
+    "notification",
+    "document",
+    "service",
+}
+ACCEPTANCE_STATUSES = {"proposed", "observed", "failed"}
+PLACEHOLDERS = {"tbd", "todo", "later", "unknown", "none", "n/a", "placeholder"}
+ID_RE = re.compile(r"^opf:[a-z0-9][a-z0-9._-]*(?::[a-z0-9][a-z0-9._-]*){1,5}$")
+EXTERNAL_RE = re.compile(
+    r"^(?P<profile>emf|orf|okf):(?P<pack>[a-z0-9][a-z0-9._-]*):"
+    r"(?P<object>[a-z0-9][a-z0-9:._/-]*)@(?P<revision>[A-Za-z0-9._-]+)$"
+)
+IMPORT_RE = re.compile(
+    r"^(?P<profile>emf|orf|okf):(?P<pack>[a-z0-9][a-z0-9._-]*)@"
+    r"(?P<revision>[A-Za-z0-9._-]+)$"
+)
+
+# Field names are edge types. Target kinds are checked mechanically.
+EDGE_TARGET_KINDS: dict[str, set[str]] = {
+    "users": {"user"},
+    "problem": {"problem"},
+    "promise": {"promise"},
+    "outcomes": {"outcome"},
+    "first_slice": {"slice"},
+    "proof": {"acceptance"},
+    "validation": {"acceptance"},
+    "operational_proof": {"acceptance"},
+    "authority": {"authority-boundary"},
+    "actor": {"user"},
+    "outcome": {"outcome"},
+    "journeys": {"journey"},
+    "moments": {"moment"},
+    "in_journey": {"journey"},
+    "on_surface": {"surface"},
+    "surfaces": {"surface"},
+    "states": {"state"},
+    "of_surface": {"surface"},
+    "allows": {"interaction"},
+    "interactions": {"interaction"},
+    "on": {"surface", "state"},
+    "yields": {"state", "outcome"},
+    "covered_by": {"acceptance"},
+    "appears_on": {"surface", "state"},
+    "applies_to": {"surface", "state", "interaction"},
+    "serves": {"outcome", "moment", "surface", "slice"},
+    "includes": {
+        "journey",
+        "moment",
+        "surface",
+        "state",
+        "interaction",
+        "content",
+        "accessibility",
+        "capability",
+        "contract",
+    },
+    "depends_on": KINDS,
+    "supersedes": KINDS,
+    "superseded_by": KINDS,
+}
+REF_FIELDS = set(EDGE_TARGET_KINDS)
+EXTERNAL_FIELDS = {"intent": {"emf"}, "research": {"orf"}, "evidence": {"okf", "orf"}}
+
+# Only composition edges make a document a member of the product definition.
+# Grounding/back-reference fields such as serves, actor, and of_surface do not.
+COMPOSITION_FIELDS = {
     "users",
+    "problem",
+    "promise",
     "outcomes",
     "first_slice",
     "proof",
+    "validation",
+    "operational_proof",
     "authority",
-    "serves",
     "journeys",
     "moments",
+    "on_surface",
     "surfaces",
     "states",
+    "allows",
     "interactions",
     "includes",
+    "covered_by",
+    "appears_on",
+    "applies_to",
     "depends_on",
-    "supersedes",
 }
 
 
@@ -77,15 +154,16 @@ class Report:
 
 def parse_frontmatter(text: str) -> dict[str, Any]:
     if not text.startswith("---"):
-        return {}
+        return {"__parse_errors__": ["missing opening frontmatter delimiter"]}
     end = text.find("\n---", 3)
     if end == -1:
-        return {}
+        return {"__parse_errors__": ["missing closing frontmatter delimiter"]}
     return _parse_yaml_block(text[3:end])
 
 
 def _parse_yaml_block(block: str) -> dict[str, Any]:
     out: dict[str, Any] = {}
+    errors: list[str] = []
     stack: list[tuple[int, dict[str, Any]]] = [(-1, out)]
     lines = block.splitlines()
     i = 0
@@ -94,16 +172,33 @@ def _parse_yaml_block(block: str) -> dict[str, Any]:
         if not raw.strip() or raw.lstrip().startswith("#"):
             i += 1
             continue
+        if "\t" in raw:
+            errors.append(f"line {i + 1}: tabs are unsupported")
+            i += 1
+            continue
         indent = len(raw) - len(raw.lstrip())
         line = raw.strip()
         while len(stack) > 1 and indent <= stack[-1][0]:
             stack.pop()
         container = stack[-1][1]
-        if line.startswith("- ") or ":" not in line:
+        if line.startswith("- "):
+            errors.append(f"line {i + 1}: unexpected list item")
+            i += 1
+            continue
+        if ":" not in line:
+            errors.append(f"line {i + 1}: expected key: value")
             i += 1
             continue
         key, _, value = line.partition(":")
         key, value = key.strip(), value.strip()
+        if key in container:
+            errors.append(f"line {i + 1}: duplicate key {key!r}")
+            i += 1
+            continue
+        if value in {"|", ">"} or value.startswith(("{", "&")):
+            errors.append(f"line {i + 1}: unsupported YAML construct")
+            i += 1
+            continue
         if value == "":
             j = i + 1
             kind = "empty"
@@ -124,9 +219,14 @@ def _parse_yaml_block(block: str) -> dict[str, Any]:
                         j += 1
                         continue
                     next_indent = len(lines[j]) - len(lines[j].lstrip())
-                    if next_indent <= indent or not lines[j].strip().startswith("- "):
+                    item = lines[j].strip()
+                    if next_indent <= indent or not item.startswith("- "):
                         break
-                    items.append(lines[j].strip()[2:].strip().strip("'\""))
+                    item = item[2:].strip()
+                    if re.match(r"^[A-Za-z_][A-Za-z0-9_-]*:\s", item):
+                        errors.append(f"line {j + 1}: lists of maps are unsupported")
+                    else:
+                        items.append(item.strip("'\""))
                     j += 1
                 container[key] = items
                 i = j
@@ -142,42 +242,57 @@ def _parse_yaml_block(block: str) -> dict[str, Any]:
             continue
         if value.startswith("[") and value.endswith("]"):
             inner = value[1:-1].strip()
-            container[key] = [
-                part.strip().strip("'\"") for part in inner.split(",") if part.strip()
-            ]
+            try:
+                row = next(csv.reader([inner], skipinitialspace=True)) if inner else []
+                container[key] = [
+                    part.strip().strip("'\"") for part in row if part.strip()
+                ]
+            except csv.Error as error:
+                errors.append(f"line {i + 1}: invalid inline list: {error}")
         elif value.lower() in {"null", "none", "~"}:
             container[key] = None
         else:
             container[key] = value.strip("'\"")
         i += 1
+    if errors:
+        out["__parse_errors__"] = errors
     return out
 
 
 def _items(value: Any) -> list[str]:
     if isinstance(value, list):
-        return [item for item in value if isinstance(item, str) and item]
-    if isinstance(value, str) and value:
+        return [item for item in value if isinstance(item, str) and item.strip()]
+    if isinstance(value, str) and value.strip():
         return [value]
     return []
 
 
+def _is_placeholder(value: str) -> bool:
+    return value.strip().lower() in PLACEHOLDERS
+
+
 def _missing(fm: dict[str, Any], fields: set[str]) -> list[str]:
-    return sorted(field for field in fields if not _items(fm.get(field)))
+    return sorted(
+        ref_field
+        for ref_field in fields
+        if not _items(fm.get(ref_field))
+        or all(_is_placeholder(item) for item in _items(fm.get(ref_field)))
+    )
 
 
 def validate_document(fm: dict[str, Any], *, face: bool = False) -> list[Problem]:
-    problems: list[Problem] = []
-    if not fm:
-        return [
-            Problem("error", "frontmatter", "OPF documents require YAML frontmatter")
-        ]
+    problems = [
+        Problem("error", "frontmatter_parse", detail)
+        for detail in fm.get("__parse_errors__", [])
+    ]
+    if len(fm) == 1 and "__parse_errors__" in fm:
+        return problems
 
     okf_version = str(fm.get("okf_version") or "")
     if okf_version != OKF_VERSION:
         problems.append(
             Problem("error", "okf_base", f"okf_version must be {OKF_VERSION!r}")
         )
-
     opf_version = str(fm.get("opf_version") or "")
     if not re.fullmatch(r"\d+\.\d+\.\d+", opf_version):
         problems.append(Problem("error", "opf_version", "opf_version must use X.Y.Z"))
@@ -196,9 +311,12 @@ def validate_document(fm: dict[str, Any], *, face: bool = False) -> list[Problem
         )
     if not str(fm.get("title") or "").strip():
         problems.append(Problem("error", "title", "title is required"))
-    if not str(fm.get("opf_id") or "").startswith("opf:"):
+    opf_id = str(fm.get("opf_id") or "")
+    if not ID_RE.fullmatch(opf_id):
         problems.append(
-            Problem("error", "opf_id", "stable opf_id must start with 'opf:'")
+            Problem(
+                "error", "opf_id", "opf_id does not match the stable OPF ID grammar"
+            )
         )
 
     verified = fm.get("verified") or {}
@@ -215,63 +333,144 @@ def validate_document(fm: dict[str, Any], *, face: bool = False) -> list[Problem
         )
 
     if face:
-        if fm.get("type") != "product":
-            problems.append(
-                Problem("error", "face_type", "index.md must use type: product")
-            )
-        status = str(fm.get("status") or "")
-        if status not in STATUSES:
-            problems.append(
-                Problem("error", "status", f"status must be one of {sorted(STATUSES)}")
-            )
-        if status in {"shaping", "validated", "building", "operating"}:
-            required = {
-                "intent",
-                "users",
-                "problem",
-                "promise",
-                "outcomes",
-                "first_slice",
-                "non_goals",
-                "proof",
-                "authority",
-            }
-            for field in _missing(fm, required):
-                problems.append(
-                    Problem(
-                        "error",
-                        "product_admission",
-                        f"status {status!r} requires {field}",
-                    )
-                )
+        _validate_face(fm, problems)
     elif fm.get("type") == "product-concept":
-        kind = str(fm.get("kind") or "")
-        if kind not in KINDS:
-            problems.append(
-                Problem("error", "kind", f"kind must be one of {sorted(KINDS)}")
-            )
-        if kind == "surface":
-            for field in _missing(fm, {"serves", "states", "proof"}):
-                problems.append(
-                    Problem(
-                        "error", "surface_traceability", f"surface requires {field}"
-                    )
-                )
-        if kind == "slice":
-            for field in _missing(fm, {"serves", "includes", "proof", "non_goals"}):
-                problems.append(
-                    Problem("error", "slice_traceability", f"slice requires {field}")
-                )
+        _validate_concept(fm, problems)
     return problems
 
 
-def references(fm: dict[str, Any]) -> set[str]:
-    refs: set[str] = set()
-    for ref_field in REF_FIELDS:
-        refs.update(
-            item for item in _items(fm.get(ref_field)) if item.startswith("opf:")
+def _validate_face(fm: dict[str, Any], problems: list[Problem]) -> None:
+    if fm.get("type") != "product":
+        problems.append(
+            Problem("error", "face_type", "index.md must use type: product")
         )
-    return refs
+    status = str(fm.get("status") or "")
+    if status not in STATUSES:
+        problems.append(
+            Problem("error", "status", f"status must be one of {sorted(STATUSES)}")
+        )
+    active = {"shaping", "validated", "building", "operating"}
+    if status in active:
+        required = {
+            "intent",
+            "users",
+            "problem",
+            "promise",
+            "outcomes",
+            "first_slice",
+            "non_goals",
+            "proof",
+            "authority",
+        }
+        for missing in _missing(fm, required):
+            problems.append(
+                Problem(
+                    "error",
+                    "product_admission",
+                    f"status {status!r} requires {missing}",
+                )
+            )
+    if status == "validated" and _missing(fm, {"validation"}):
+        problems.append(
+            Problem("error", "validated_gate", "validated requires observed validation")
+        )
+    if status == "operating" and _missing(fm, {"operational_proof"}):
+        problems.append(
+            Problem(
+                "error",
+                "operating_gate",
+                "operating requires observed operational_proof",
+            )
+        )
+    if status == "retired" and _missing(fm, {"retirement_reason"}):
+        problems.append(
+            Problem("error", "retired_gate", "retired requires retirement_reason")
+        )
+
+
+def _validate_concept(fm: dict[str, Any], problems: list[Problem]) -> None:
+    kind = str(fm.get("kind") or "")
+    if kind not in KINDS:
+        problems.append(
+            Problem("error", "kind", f"kind must be one of {sorted(KINDS)}")
+        )
+        return
+    requirements: dict[str, set[str]] = {
+        "journey": {"actor", "outcome", "moments"},
+        "moment": {"in_journey", "on_surface"},
+        "surface": {"serves", "states", "proof", "surface_kind"},
+        "state": {"of_surface"},
+        "interaction": {"on", "yields"},
+        "content": {"appears_on"},
+        "accessibility": {"applies_to", "requirement"},
+        "slice": {"serves", "includes", "proof", "non_goals"},
+        "acceptance": {"condition", "status"},
+    }
+    for missing in _missing(fm, requirements.get(kind, set())):
+        problems.append(
+            Problem("error", f"{kind}_traceability", f"{kind} requires {missing}")
+        )
+    if kind == "surface" and str(fm.get("surface_kind") or "") not in SURFACE_KINDS:
+        problems.append(
+            Problem(
+                "error",
+                "surface_kind",
+                f"surface_kind must be one of {sorted(SURFACE_KINDS)}",
+            )
+        )
+    if (
+        kind == "state"
+        and not _items(fm.get("allows"))
+        and str(fm.get("terminal") or "").lower() != "true"
+    ):
+        problems.append(
+            Problem(
+                "error", "state_transition", "state requires allows or terminal: true"
+            )
+        )
+    if kind == "interaction" and not (
+        _items(fm.get("proof")) or _items(fm.get("covered_by"))
+    ):
+        problems.append(
+            Problem(
+                "error", "interaction_proof", "interaction requires proof or covered_by"
+            )
+        )
+    if kind == "acceptance":
+        status = str(fm.get("status") or "")
+        if status not in ACCEPTANCE_STATUSES:
+            problems.append(
+                Problem(
+                    "error",
+                    "acceptance_status",
+                    f"status must be one of {sorted(ACCEPTANCE_STATUSES)}",
+                )
+            )
+        if status in {"observed", "failed"} and _missing(fm, {"evidence"}):
+            problems.append(
+                Problem(
+                    "error",
+                    "acceptance_evidence",
+                    f"status {status!r} requires evidence",
+                )
+            )
+
+
+def internal_references(fm: dict[str, Any]) -> list[tuple[str, str]]:
+    return [
+        (ref_field, item)
+        for ref_field in REF_FIELDS
+        for item in _items(fm.get(ref_field))
+        if item.startswith("opf:")
+    ]
+
+
+def external_references(fm: dict[str, Any]) -> list[tuple[str, str, set[str]]]:
+    return [
+        (ref_field, item, profiles)
+        for ref_field, profiles in EXTERNAL_FIELDS.items()
+        for item in _items(fm.get(ref_field))
+    ]
 
 
 def validate_pack(root: Path, *, strict: bool = False) -> list[Report]:
@@ -283,7 +482,6 @@ def validate_pack(root: Path, *, strict: bool = False) -> list[Report]:
                 face_path, [Problem("error", "face_missing", "pack requires index.md")]
             )
         ]
-
     files = [path for path in sorted(root.rglob("*.md")) if path.name != "log.md"]
     frontmatters = {
         path: parse_frontmatter(path.read_text(encoding="utf-8", errors="replace"))
@@ -296,6 +494,8 @@ def validate_pack(root: Path, *, strict: bool = False) -> list[Report]:
     report_by_path = {report.path: report for report in reports}
 
     by_id: dict[str, Path] = {}
+    kind_by_id: dict[str, str] = {}
+    fm_by_id: dict[str, dict[str, Any]] = {}
     for path, fm in frontmatters.items():
         opf_id = str(fm.get("opf_id") or "")
         if not opf_id:
@@ -304,35 +504,58 @@ def validate_pack(root: Path, *, strict: bool = False) -> list[Report]:
             report_by_path[path].problems.append(
                 Problem("error", "duplicate_id", f"also declared by {by_id[opf_id]}")
             )
-        else:
-            by_id[opf_id] = path
+            continue
+        by_id[opf_id] = path
+        kind_by_id[opf_id] = (
+            "product" if path == face_path else str(fm.get("kind") or "")
+        )
+        fm_by_id[opf_id] = fm
 
-    graph: dict[str, set[str]] = {opf_id: set() for opf_id in by_id}
+    directed: dict[str, set[str]] = {opf_id: set() for opf_id in by_id}
     for path, fm in frontmatters.items():
         source = str(fm.get("opf_id") or "")
-        for target in references(fm):
+        for ref_field, target in internal_references(fm):
             if target not in by_id:
                 report_by_path[path].problems.append(
-                    Problem("error", "unresolved_ref", target)
+                    Problem("error", "unresolved_ref", f"{ref_field} -> {target}")
                 )
                 continue
-            if source in graph:
-                graph[source].add(target)
-                graph[target].add(source)
+            allowed = EDGE_TARGET_KINDS[ref_field]
+            if kind_by_id[target] not in allowed:
+                report_by_path[path].problems.append(
+                    Problem(
+                        "error",
+                        "wrong_target_kind",
+                        f"{ref_field} -> {target} ({kind_by_id[target]!r}); expected {sorted(allowed)}",
+                    )
+                )
+            if ref_field in COMPOSITION_FIELDS and source in directed:
+                directed[source].add(target)
 
-    face_id = str(frontmatters.get(face_path, {}).get("opf_id") or "")
+    face_fm = frontmatters.get(face_path, {})
+    _validate_external_refs(
+        frontmatters, report_by_path, face_fm, face_path, strict=strict
+    )
+    _validate_supersession(fm_by_id, kind_by_id, by_id, report_by_path)
+    _validate_lifecycle(face_fm, fm_by_id, kind_by_id, face_path, report_by_path)
+
+    face_id = str(face_fm.get("opf_id") or "")
     seen: set[str] = set()
-    pending = [face_id] if face_id in graph else []
+    pending = [face_id] if face_id in directed else []
     while pending:
         current = pending.pop()
         if current in seen:
             continue
         seen.add(current)
-        pending.extend(graph[current] - seen)
+        pending.extend(directed[current] - seen)
     for opf_id, path in by_id.items():
         if opf_id not in seen:
             report_by_path[path].problems.append(
-                Problem("error", "orphan", "concept is disconnected from product face")
+                Problem(
+                    "error",
+                    "orphan",
+                    "concept is not reachable from the product face through composition edges",
+                )
             )
 
     if not (root / "log.md").is_file():
@@ -354,6 +577,220 @@ def validate_pack(root: Path, *, strict: bool = False) -> list[Report]:
     return reports
 
 
+def _validate_external_refs(
+    frontmatters: dict[Path, dict[str, Any]],
+    report_by_path: dict[Path, Report],
+    face_fm: dict[str, Any],
+    face_path: Path,
+    *,
+    strict: bool,
+) -> None:
+    imports = set(_items(face_fm.get("imports")))
+    valid_imports = {item for item in imports if IMPORT_RE.fullmatch(item)}
+    for item in imports - valid_imports:
+        report_by_path[face_path].problems.append(
+            Problem("error" if strict else "warn", "invalid_import", item)
+        )
+    for path, fm in frontmatters.items():
+        for ref_field, ref, expected_profiles in external_references(fm):
+            match = EXTERNAL_RE.fullmatch(ref)
+            level = "error" if strict else "warn"
+            if not match:
+                report_by_path[path].problems.append(
+                    Problem(level, "external_ref_unpinned", f"{ref_field} -> {ref}")
+                )
+                continue
+            if match.group("profile") not in expected_profiles:
+                report_by_path[path].problems.append(
+                    Problem(
+                        "error",
+                        "external_ref_profile",
+                        f"{ref_field} cannot reference {match.group('profile')}",
+                    )
+                )
+                continue
+            import_id = f"{match.group('profile')}:{match.group('pack')}@{match.group('revision')}"
+            if import_id not in valid_imports:
+                report_by_path[path].problems.append(
+                    Problem(
+                        level,
+                        "external_ref_unimported",
+                        f"{ref} needs import {import_id}",
+                    )
+                )
+
+
+def _validate_supersession(
+    fm_by_id: dict[str, dict[str, Any]],
+    kind_by_id: dict[str, str],
+    by_id: dict[str, Path],
+    report_by_path: dict[Path, Report],
+) -> None:
+    incoming: dict[str, list[str]] = {}
+    for source, fm in fm_by_id.items():
+        for target in _items(fm.get("supersedes")):
+            if target not in fm_by_id:
+                continue
+            incoming.setdefault(target, []).append(source)
+            if kind_by_id[source] != kind_by_id[target]:
+                report_by_path[by_id[source]].problems.append(
+                    Problem(
+                        "error", "supersession_kind", f"{source} and {target} differ"
+                    )
+                )
+            if source not in _items(fm_by_id[target].get("superseded_by")):
+                report_by_path[by_id[source]].problems.append(
+                    Problem(
+                        "error",
+                        "supersession_inverse",
+                        f"{target} must declare superseded_by: {source}",
+                    )
+                )
+        for target in _items(fm.get("superseded_by")):
+            if target in fm_by_id and source not in _items(
+                fm_by_id[target].get("supersedes")
+            ):
+                report_by_path[by_id[source]].problems.append(
+                    Problem(
+                        "error",
+                        "supersession_inverse",
+                        f"{target} must declare supersedes: {source}",
+                    )
+                )
+    for target, sources in incoming.items():
+        if len(sources) > 1:
+            report_by_path[by_id[target]].problems.append(
+                Problem("error", "supersession_multi_head", f"superseded by {sources}")
+            )
+
+
+def _validate_lifecycle(
+    face_fm: dict[str, Any],
+    fm_by_id: dict[str, dict[str, Any]],
+    kind_by_id: dict[str, str],
+    face_path: Path,
+    report_by_path: dict[Path, Report],
+) -> None:
+    status = str(face_fm.get("status") or "")
+    if status in {"shaping", "building", "validated", "operating"}:
+        _validate_first_slice(face_fm, fm_by_id, kind_by_id, face_path, report_by_path)
+    if status == "validated":
+        _require_observed(face_fm, "validation", fm_by_id, face_path, report_by_path)
+    if status == "operating":
+        _require_observed(
+            face_fm, "operational_proof", fm_by_id, face_path, report_by_path
+        )
+
+
+def _require_observed(
+    face_fm: dict[str, Any],
+    ref_field: str,
+    fm_by_id: dict[str, dict[str, Any]],
+    face_path: Path,
+    report_by_path: dict[Path, Report],
+) -> None:
+    for target in _items(face_fm.get(ref_field)):
+        if (
+            target in fm_by_id
+            and str(fm_by_id[target].get("status") or "") == "observed"
+        ):
+            return
+    report_by_path[face_path].problems.append(
+        Problem(
+            "error",
+            f"{ref_field}_not_observed",
+            f"{ref_field} requires at least one observed acceptance",
+        )
+    )
+
+
+def _validate_first_slice(
+    face_fm: dict[str, Any],
+    fm_by_id: dict[str, dict[str, Any]],
+    kind_by_id: dict[str, str],
+    face_path: Path,
+    report_by_path: dict[Path, Report],
+) -> None:
+    slice_ids = _items(face_fm.get("first_slice"))
+    if len(slice_ids) != 1:
+        report_by_path[face_path].problems.append(
+            Problem(
+                "error", "first_slice_count", "first_slice must name exactly one slice"
+            )
+        )
+        return
+    slice_id = slice_ids[0]
+    if kind_by_id.get(slice_id) != "slice":
+        return
+    slice_fm = fm_by_id[slice_id]
+    journeys = [
+        target
+        for target in _items(slice_fm.get("includes"))
+        if kind_by_id.get(target) == "journey"
+    ]
+    if not journeys:
+        report_by_path[face_path].problems.append(
+            Problem("error", "experience_chain", "first slice must include a journey")
+        )
+        return
+    for journey_id in journeys:
+        journey = fm_by_id[journey_id]
+        outcome = _items(journey.get("outcome"))
+        moments = _items(journey.get("moments"))
+        if not outcome or not moments:
+            report_by_path[face_path].problems.append(
+                Problem(
+                    "error",
+                    "experience_chain",
+                    f"{journey_id} lacks outcome or moments",
+                )
+            )
+            continue
+        complete = False
+        for moment_id in moments:
+            moment = fm_by_id.get(moment_id, {})
+            if journey_id not in _items(moment.get("in_journey")):
+                continue
+            for surface_id in _items(moment.get("on_surface")):
+                surface = fm_by_id.get(surface_id, {})
+                surface_proof = _items(surface.get("proof"))
+                for state_id in _items(surface.get("states")):
+                    state = fm_by_id.get(state_id, {})
+                    if surface_id not in _items(state.get("of_surface")):
+                        continue
+                    for interaction_id in _items(state.get("allows")):
+                        interaction = fm_by_id.get(interaction_id, {})
+                        if not (
+                            {state_id, surface_id} & set(_items(interaction.get("on")))
+                        ):
+                            continue
+                        yields = set(_items(interaction.get("yields")))
+                        if not (yields & (set(outcome) | {state_id})):
+                            report_by_path[face_path].problems.append(
+                                Problem(
+                                    "error",
+                                    "experience_outcome",
+                                    f"{interaction_id} does not yield the journey outcome or a declared state",
+                                )
+                            )
+                            continue
+                        proof = (
+                            surface_proof
+                            + _items(interaction.get("proof"))
+                            + _items(interaction.get("covered_by"))
+                        )
+                        if any(kind_by_id.get(item) == "acceptance" for item in proof):
+                            complete = True
+        if not complete:
+            report_by_path[face_path].problems.append(
+                Problem(
+                    "error",
+                    "experience_chain",
+                    f"{journey_id} lacks journey -> moment -> surface -> state -> interaction -> proof",
+                )
+            )
+
+
 def validate_path(path: Path, *, strict: bool = False) -> list[Report]:
     if path.is_dir():
         return validate_pack(path, strict=strict)
@@ -371,10 +808,10 @@ def selftest() -> int:
         "opf_id": "opf:test:product",
         "title": "Test",
         "status": "shaping",
-        "intent": ["emf:test:intent"],
+        "intent": ["emf:test:intent@r1"],
         "users": ["opf:test:user"],
-        "problem": "A problem",
-        "promise": "A promise",
+        "problem": "opf:test:problem",
+        "promise": "opf:test:promise",
         "outcomes": ["opf:test:outcome"],
         "first_slice": "opf:test:slice",
         "non_goals": ["Not everything"],
@@ -383,31 +820,26 @@ def selftest() -> int:
         "verified": {"by": "human:test", "method": "test"},
     }
     errors = lambda fm, face=False: {
-        p.rule for p in validate_document(fm, face=face) if p.level == "error"
+        problem.rule
+        for problem in validate_document(fm, face=face)
+        if problem.level == "error"
     }
     assert not errors(base, face=True)
-    assert "product_admission" in errors({**base, "proof": []}, face=True)
+    assert "product_admission" in errors({**base, "proof": ["TBD"]}, face=True)
     assert "version_alignment" in errors({**base, "opf_version": "0.1.9"}, face=True)
-    surface = {
-        **base,
-        "type": "product-concept",
-        "kind": "surface",
-        "opf_id": "opf:test:surface",
-        "serves": ["opf:test:outcome"],
-        "states": [],
-    }
-    assert "surface_traceability" in errors(surface)
+    assert "frontmatter_parse" in errors(
+        parse_frontmatter("---\ntitle: A\ntitle: B\n---\n")
+    )
     with TemporaryDirectory() as directory:
         root = Path(directory)
-        (root / "index.md").write_text(
-            "---\n" + "\n".join(f"{k}: {v}" for k, v in {}) + "\n---\n",
-            encoding="utf-8",
-        )
+        (root / "index.md").write_text("---\n---\n", encoding="utf-8")
         assert any(
-            p.rule == "frontmatter" for r in validate_pack(root) for p in r.problems
+            problem.rule == "okf_base"
+            for report in validate_pack(root)
+            for problem in report.problems
         )
     print(
-        "selftest OK — admission, version alignment, UX traceability, and invalid-pack checks"
+        "selftest OK — admission, version alignment, placeholder, parser, and invalid-pack gates"
     )
     return 0
 
@@ -417,7 +849,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("paths", nargs="*", type=Path)
     parser.add_argument("--selftest", action="store_true")
     parser.add_argument(
-        "--strict", action="store_true", help="treat warnings as errors"
+        "--strict",
+        action="store_true",
+        help="require pinned imports and treat warnings as errors",
     )
     args = parser.parse_args(argv)
     if args.selftest:

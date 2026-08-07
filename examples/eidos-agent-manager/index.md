@@ -1,15 +1,16 @@
 ---
 okf_version: "0.2"
-opf_version: "0.2.0"
+opf_version: "0.2.1"
 profile: opf
 type: product
 opf_id: opf:eam:product
 title: "Eidos Agent Manager"
 status: shaping
-intent: [emf:eam:executive-office]
+imports: [emf:eam@2026-08-07]
+intent: [emf:eam:executive-office@2026-08-07]
 users: [opf:eam:user:daniel]
-problem: "Agent capacity exceeds the human ability to coordinate it."
-promise: "Show Daniel what needs his judgment while assistants handle the rest."
+problem: opf:eam:problem:coordination
+promise: opf:eam:promise:executive-office
 outcomes: [opf:eam:outcome:protect-attention]
 first_slice: opf:eam:slice:first-orientation
 non_goals: ["ambient surveillance", "replacing native lifecycle authorities"]

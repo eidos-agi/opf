@@ -1,5 +1,5 @@
 """Open Product Format — additive OKF v0.2 profile."""
 
 OKF_VERSION = "0.2"
-OPF_VERSION = "0.2.0"
+OPF_VERSION = "0.2.1"
 __version__ = OPF_VERSION
