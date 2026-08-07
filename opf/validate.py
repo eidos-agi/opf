@@ -109,8 +109,6 @@ EDGE_TARGET_KINDS: dict[str, set[str]] = {
 REF_FIELDS = set(EDGE_TARGET_KINDS)
 EXTERNAL_FIELDS = {"intent": {"emf"}, "research": {"orf"}, "evidence": {"okf", "orf"}}
 
-# Only composition edges make a document a member of the product definition.
-# Grounding/back-reference fields such as serves, actor, and of_surface do not.
 COMPOSITION_FIELDS = {
     "users",
     "problem",
@@ -155,3 +153,12 @@ class Report:
     @property
     def errors(self) -> list[Problem]:
         return [problem for problem in self.problems if problem.level == "error"]
+
+
+def parse_frontmatter(text: str) -> dict[str, Any]:
+    if not text.startswith("---"):
+        return {"__parse_errors__": ["missing opening frontmatter delimiter"]}
+    end = text.find("\n---", 3)
+    if end == -1:
+        return {"__parse_errors__": ["missing closing frontmatter delimiter"]}
+    return _parse_yaml_block(text[3:end])
