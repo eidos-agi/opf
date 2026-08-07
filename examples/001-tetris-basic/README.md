@@ -1,6 +1,6 @@
 # Basic Tetris — OPF dogfood
 
-The product definition lives in `opf/`; the implementation lives in `app/`.
+The product definition lives in `opf/`; the implementation lives in `code/`.
 
 ```bash
 python3 -m opf.validate --strict examples/001-tetris-basic/opf

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#d9d4c8" />
+    <title>Placement Laboratory — OPF Tetris AI</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="lab-shell">
+      <header class="title-block">
+        <p class="kicker">OPF experiment 002 · deterministic heuristic</p>
+        <h1>Placement<br />Laboratory</h1>
+        <p class="dek">A small machine studies every legal landing, scores the resulting board, and commits one move.</p>
+      </header>
+
+      <section class="apparatus" aria-label="Autonomous Tetris board">
+        <div class="board-wrap">
+          <canvas id="board" width="280" height="560" aria-label="Autonomous 10 by 20 Tetris board"></canvas>
+          <span class="axis axis-x" aria-hidden="true">0 1 2 3 4 5 6 7 8 9</span>
+        </div>
+        <p id="status" class="status" aria-live="polite">Starting run.</p>
+      </section>
+
+      <aside class="console">
+        <section class="totals" aria-label="Run totals">
+          <div><span>Pieces</span><strong id="pieces">0</strong></div>
+          <div><span>Lines</span><strong id="lines">0</strong></div>
+          <div class="score"><span>Score</span><strong id="score">000000</strong></div>
+        </section>
+
+        <section class="decision" aria-labelledby="decision-title">
+          <h2 id="decision-title">Current decision</h2>
+          <dl>
+            <div><dt>Piece</dt><dd id="piece">—</dd></div>
+            <div><dt>Rotation</dt><dd id="rotation">—</dd></div>
+            <div><dt>Column</dt><dd id="column">—</dd></div>
+            <div><dt>Max height</dt><dd id="height">—</dd></div>
+            <div><dt>Holes</dt><dd id="holes">—</dd></div>
+            <div><dt>Bumpiness</dt><dd id="bumpiness">—</dd></div>
+            <div class="evaluation"><dt>Board fit <small>higher is better</small></dt><dd id="evaluation">—</dd></div>
+          </dl>
+        </section>
+
+        <section class="controls" aria-label="Run controls">
+          <label for="speed">Target cadence <span id="speed-label">260 ms / piece</span></label>
+          <input id="speed" type="range" min="60" max="900" value="260" step="20" />
+          <div class="button-row">
+            <button id="pause" type="button">Pause run</button>
+            <button id="restart" type="button">Restart seed</button>
+          </div>
+        </section>
+
+        <section class="log" aria-labelledby="trace-title">
+          <h2 id="trace-title">Placement trace</h2>
+          <ol id="trace"></ol>
+        </section>
+      </aside>
+    </main>
+    <script type="module" src="game.mjs"></script>
+  </body>
+</html>
