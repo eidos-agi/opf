@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { clearLines, createBoard, merge } from "../../001-tetris-basic/code/game-core.mjs";
-import { boardMetrics, choosePlacement, legalPlacements } from "./ai-core.mjs";
+import { boardMetrics, buildActionPlan, choosePlacement, legalPlacements } from "./ai-core.mjs";
 
 test("board metrics distinguish height, holes, and bumpiness", () => {
   const board = createBoard(4, 4);
@@ -36,6 +36,12 @@ test("the agent prefers the available line clear", () => {
 test("the same board and piece produce the same decision", () => {
   const board = createBoard();
   assert.deepEqual(choosePlacement(board, "L"), choosePlacement(board, "L"));
+});
+
+test("the action plan reaches a placement without teleporting", () => {
+  assert.deepEqual(buildActionPlan(4, { rotation: 2, x: 1, y: 3 }), [
+    "rotate", "rotate", "left", "left", "left", "down", "down", "down",
+  ]);
 });
 
 test("the autonomous loop places repeatedly and clears lines", () => {

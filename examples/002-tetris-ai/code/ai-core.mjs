@@ -96,3 +96,11 @@ export function choosePlacement(board, kind) {
   )[0] ?? null;
 }
 
+export function buildActionPlan(startX, placement) {
+  const horizontal = placement.x - startX;
+  return [
+    ...Array(placement.rotation).fill("rotate"),
+    ...Array(Math.abs(horizontal)).fill(horizontal < 0 ? "left" : "right"),
+    ...Array(placement.y).fill("down"),
+  ];
+}

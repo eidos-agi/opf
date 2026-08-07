@@ -10,5 +10,4 @@ python3 -m http.server 8789 --directory examples
 
 Open <http://127.0.0.1:8789/002-tetris-ai/code/> to watch the agent play.
 
-The agent evaluates every legal rotation and column using line clears, aggregate height, holes, maximum height, and bumpiness. It does not call a model or network service.
-
+The agent evaluates every legal rotation and column using line clears, aggregate height, holes, maximum height, and bumpiness. It then reaches the chosen landing through normal game inputs, limited to one nudge or rotation every 100 ms. It does not call a model or network service.

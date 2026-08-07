@@ -13,5 +13,4 @@ verified:
   method: "observable board transition backed by deterministic scoring"
 ---
 
-Only an enumerated legal placement may be committed to the shared game board.
-
+The agent reaches an enumerated legal placement through normal game inputs, limited to one nudge or rotation every 100 ms. It cannot teleport to the chosen landing.

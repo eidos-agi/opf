@@ -18,7 +18,7 @@
       <section class="apparatus" aria-label="Autonomous Tetris board">
         <div class="board-wrap">
           <canvas id="board" width="280" height="560" aria-label="Autonomous 10 by 20 Tetris board"></canvas>
-          <span class="axis axis-x" aria-hidden="true">0 1 2 3 4 5 6 7 8 9</span>
+          <span class="axis axis-x" aria-hidden="true">1 2 3 4 5 6 7 8 9 10</span>
         </div>
         <p id="status" class="status" aria-live="polite">Starting run.</p>
       </section>
@@ -44,8 +44,7 @@
         </section>
 
         <section class="controls" aria-label="Run controls">
-          <label for="speed">Target cadence <span id="speed-label">260 ms / piece</span></label>
-          <input id="speed" type="range" min="60" max="900" value="260" step="20" />
+          <p class="clock"><span>Action clock</span><strong>100 ms / input</strong></p>
           <div class="button-row">
             <button id="pause" type="button">Pause run</button>
             <button id="restart" type="button">Restart seed</button>

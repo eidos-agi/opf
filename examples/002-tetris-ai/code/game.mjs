@@ -8,15 +8,16 @@ import {
   createBoard,
   createPiece,
   merge,
+  rotateMatrix,
 } from "../../001-tetris-basic/code/game-core.mjs";
-import { choosePlacement } from "./ai-core.mjs";
+import { buildActionPlan, choosePlacement } from "./ai-core.mjs";
 
 const BLOCK = 28;
+const ACTION_INTERVAL = 100;
 const canvas = document.querySelector("#board");
 const context = canvas.getContext("2d");
 const status = document.querySelector("#status");
 const pauseButton = document.querySelector("#pause");
-const speedInput = document.querySelector("#speed");
 const values = Object.fromEntries(
   ["pieces", "lines", "score", "piece", "rotation", "column", "height", "holes", "bumpiness", "evaluation"]
     .map((id) => [id, document.querySelector(`#${id}`)]),
@@ -33,7 +34,8 @@ let lines;
 let score;
 let seed;
 let bag;
-let lastFall;
+let actions;
+let lastAction;
 
 function random() {
   seed ^= seed << 13;
@@ -88,11 +90,37 @@ function planPiece() {
     return;
   }
   active = createPiece(kind);
-  active.matrix = decision.matrix;
-  active.x = decision.x;
-  active.y = 0;
-  status.textContent = `Evaluated ${kind}; descending to row ${decision.y}.`;
+  actions = buildActionPlan(active.x, decision);
+  status.textContent = `Evaluated ${kind}; ${actions.length} legal inputs queued.`;
   updateReadouts();
+}
+
+function applyNextAction() {
+  const action = actions.shift();
+  if (!action) {
+    lockPiece();
+    return;
+  }
+
+  if (action === "rotate") {
+    const matrix = rotateMatrix(active.matrix);
+    if (collides(board, active, 0, 0, matrix)) return failPlan(action);
+    active.matrix = matrix;
+  } else {
+    const [x, y] = action === "left" ? [-1, 0] : action === "right" ? [1, 0] : [0, 1];
+    if (collides(board, active, x, y)) return failPlan(action);
+    active.x += x;
+    active.y += y;
+  }
+
+  status.textContent = `${active.kind}: ${action} · ${actions.length} inputs remain.`;
+}
+
+function failPlan(action) {
+  gameOver = true;
+  paused = true;
+  status.textContent = `Plan stopped: ${action} became illegal. Restart the seed.`;
+  pauseButton.textContent = "Resume";
 }
 
 function lockPiece() {
@@ -121,7 +149,8 @@ function reset() {
   score = 0;
   seed = 0x0df00d;
   bag = [];
-  lastFall = performance.now();
+  actions = [];
+  lastAction = performance.now();
   trace.replaceChildren();
   pauseButton.textContent = "Pause run";
   planPiece();
@@ -133,7 +162,7 @@ function togglePause() {
   paused = !paused;
   pauseButton.textContent = paused ? "Resume run" : "Pause run";
   status.textContent = paused ? "Run paused." : "Run resumed.";
-  lastFall = performance.now();
+  lastAction = performance.now();
 }
 
 function drawCell(x, y, kind, alpha = 1) {
@@ -173,11 +202,9 @@ function draw() {
 }
 
 function frame(timestamp) {
-  const delay = Math.max(18, Number(speedInput.value) / Math.max(1, decision?.y ?? 1));
-  if (!paused && !gameOver && active && timestamp - lastFall >= delay) {
-    if (active.y < decision.y && !collides(board, active, 0, 1)) active.y += 1;
-    else lockPiece();
-    lastFall = timestamp;
+  if (!paused && !gameOver && active && timestamp - lastAction >= ACTION_INTERVAL) {
+    applyNextAction();
+    lastAction = timestamp;
   }
   draw();
   requestAnimationFrame(frame);
@@ -185,9 +212,6 @@ function frame(timestamp) {
 
 pauseButton.addEventListener("click", togglePause);
 document.querySelector("#restart").addEventListener("click", reset);
-speedInput.addEventListener("input", () => {
-  document.querySelector("#speed-label").textContent = `${speedInput.value} ms / piece`;
-});
 
 reset();
 requestAnimationFrame(frame);

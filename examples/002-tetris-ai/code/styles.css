@@ -21,8 +21,7 @@ body {
   background-size: 18px 18px;
 }
 
-button:focus-visible,
-input:focus-visible {
+button:focus-visible {
   outline: 3px solid #f0b44d;
   outline-offset: 3px;
 }
@@ -158,8 +157,7 @@ h2 {
 .decision .evaluation small { display: block; font-size: .55rem; font-weight: 500; text-transform: none; }
 
 .controls { display: grid; gap: 12px; }
-.controls label { display: flex; justify-content: space-between; font-weight: 800; }
-input[type="range"] { width: 100%; accent-color: var(--wine); }
+.clock { display: flex; justify-content: space-between; margin: 0; font-weight: 800; }
 .button-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
 button {
