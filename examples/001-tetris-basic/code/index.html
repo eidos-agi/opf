@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#e9eef5" />
+    <title>Basic Tetris — OPF first slice</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="game-shell">
+      <header class="masthead">
+        <p class="eyebrow">OPF first slice / local browser</p>
+        <h1>Basic<br />Tetris</h1>
+        <p class="promise">Open the page. Place the pieces. Clear the lines.</p>
+      </header>
+
+      <section class="board-frame" aria-label="Tetris game">
+        <canvas
+          id="board"
+          width="300"
+          height="600"
+          tabindex="0"
+          aria-label="10 by 20 Tetris board. Use arrow keys to move and rotate."
+        ></canvas>
+        <div id="status-overlay" class="status-overlay" hidden>
+          <strong id="overlay-title">Paused</strong>
+          <span id="overlay-copy">Press P to continue</span>
+        </div>
+      </section>
+
+      <aside class="instrument-panel" aria-label="Game status">
+        <div class="readout score-readout">
+          <span>Score</span>
+          <strong id="score">000000</strong>
+        </div>
+        <div class="readout-pair">
+          <div class="readout">
+            <span>Lines</span>
+            <strong id="lines">0</strong>
+          </div>
+          <div class="readout">
+            <span>Level</span>
+            <strong id="level">1</strong>
+          </div>
+        </div>
+        <div class="next-piece">
+          <span>Next</span>
+          <canvas id="next" width="120" height="120" aria-label="Next piece"></canvas>
+        </div>
+        <p id="live-status" class="sr-only" aria-live="polite">Game started</p>
+        <button id="restart" class="restart" type="button">Restart game</button>
+        <dl class="key-map">
+          <div><dt>Move</dt><dd>← →</dd></div>
+          <div><dt>Rotate</dt><dd>↑ / X</dd></div>
+          <div><dt>Soft drop</dt><dd>↓</dd></div>
+          <div><dt>Hard drop</dt><dd>Space</dd></div>
+          <div><dt>Pause</dt><dd>P</dd></div>
+        </dl>
+      </aside>
+
+      <nav class="touch-controls" aria-label="Touch controls">
+        <button type="button" data-action="left" aria-label="Move left">←</button>
+        <button type="button" data-action="rotate" aria-label="Rotate">↻</button>
+        <button type="button" data-action="right" aria-label="Move right">→</button>
+        <button type="button" data-action="down" aria-label="Soft drop">↓</button>
+        <button type="button" data-action="drop" class="wide">Drop</button>
+        <button type="button" data-action="pause">Pause</button>
+      </nav>
+    </main>
+
+    <script type="module" src="game.mjs"></script>
+  </body>
+</html>
