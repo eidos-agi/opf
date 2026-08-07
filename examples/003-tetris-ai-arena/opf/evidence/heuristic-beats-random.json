@@ -1,0 +1,17 @@
+{
+  "subject": "opf:tetris-ai-arena:acceptance:heuristic-beats-random",
+  "observed_at": "2026-08-07T23:53:13Z",
+  "method": "fixed-seed evaluator plus timed desktop and mobile browser observation",
+  "source_revision": "sha256:52d1d67570e94393ddf056b5aaa6729cf55fe0b220b08f987204880ed0cbd7c2",
+  "result": "passed",
+  "checks": [
+    "50 fixed 300-piece matches produced 50 heuristic wins",
+    "heuristic cleared 5670 aggregate lines versus 2 for the random legal control",
+    "both strategies produced zero illegal placements",
+    "four arena tests and all ten reused engine and heuristic tests passed",
+    "canvas mutations followed the 100 ms input clock without teleporting",
+    "both agents visibly locked pieces, pause held both canvases, and resume advanced them",
+    "restart reset both piece counters to zero",
+    "desktop and 390-pixel mobile layouts rendered without page errors"
+  ]
+}

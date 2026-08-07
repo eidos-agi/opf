@@ -1,0 +1,67 @@
+:root {
+  --fog: #b8c4c8;
+  --ice: #e9eef0;
+  --ink: #0b1f2a;
+  --orange: #d85d2f;
+  --blue: #176b87;
+  --rule: rgba(11, 31, 42, .25);
+  color-scheme: light;
+  font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--ink); background: var(--fog); }
+button:focus-visible { outline: 3px solid #ffe45e; outline-offset: 3px; }
+
+main { width: min(1080px, calc(100% - 32px)); margin: 0 auto; padding: 36px 0 28px; }
+header { display: grid; grid-template-columns: 1fr minmax(260px, 420px); gap: 24px; align-items: end; margin-bottom: 28px; }
+.kicker { grid-column: 1 / -1; margin: 0; color: var(--orange); font: 800 .7rem/1 "SFMono-Regular", Consolas, monospace; letter-spacing: .12em; text-transform: uppercase; }
+h1 { margin: 0; font: 900 clamp(3rem, 7vw, 6.8rem)/.75 "Arial Narrow", "Avenir Next Condensed", sans-serif; letter-spacing: -.055em; text-transform: uppercase; }
+h1 em { color: var(--blue); font-style: normal; }
+.intro { max-width: 38ch; margin: 0; padding: 16px 0 3px 18px; border-left: 5px solid var(--ink); font-size: 1rem; line-height: 1.55; }
+
+.arena { display: grid; grid-template-columns: 1fr 82px 1fr; align-items: center; border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink); }
+.player { display: grid; grid-template-columns: minmax(150px, 1fr) 220px; gap: 20px; align-items: end; padding: 24px; }
+.player.random { border-right: 1px solid var(--rule); }
+.player.heuristic { border-left: 1px solid var(--rule); }
+.identity { align-self: start; }
+.identity span, dt { font: 800 .62rem/1 "SFMono-Regular", Consolas, monospace; letter-spacing: .1em; text-transform: uppercase; }
+.identity span { color: var(--orange); }
+.heuristic .identity span { color: var(--blue); }
+h2 { margin: 8px 0; font: 900 1.55rem/1 "Arial Narrow", "Avenir Next Condensed", sans-serif; text-transform: uppercase; }
+.identity p { margin: 0; font-size: .8rem; line-height: 1.4; }
+canvas { grid-column: 2; grid-row: 1 / span 2; display: block; width: 220px; height: 440px; border: 8px solid var(--ink); background: var(--ice); box-shadow: 8px 8px 0 var(--orange); }
+.heuristic canvas { box-shadow: 8px 8px 0 var(--blue); }
+dl { align-self: end; margin: 0; font-family: "SFMono-Regular", Consolas, monospace; }
+dl div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px dotted var(--rule); }
+dd { margin: 0; font-size: .75rem; font-weight: 800; }
+.versus { display: grid; justify-items: center; gap: 20px; font-family: "SFMono-Regular", Consolas, monospace; text-align: center; text-transform: uppercase; }
+.versus b { display: grid; place-items: center; width: 58px; height: 58px; border: 2px solid var(--ink); border-radius: 50%; font-size: 1.35rem; }
+.versus span { font-size: .55rem; line-height: 1.45; letter-spacing: .1em; }
+
+footer { display: flex; justify-content: space-between; gap: 20px; align-items: center; padding-top: 20px; }
+#status { margin: 0; font: 700 .75rem/1.5 "SFMono-Regular", Consolas, monospace; }
+footer div { display: flex; gap: 10px; }
+button { min-height: 42px; padding: 0 18px; border: 2px solid var(--ink); border-radius: 0; color: var(--ink); background: transparent; font: 800 .68rem/1 "SFMono-Regular", Consolas, monospace; text-transform: uppercase; cursor: pointer; }
+button:hover { color: var(--ice); background: var(--ink); }
+
+@media (max-width: 950px) {
+  header { grid-template-columns: 1fr; }
+  .arena { grid-template-columns: 1fr; }
+  .player { grid-template-columns: 1fr 220px; width: min(100%, 520px); margin: auto; }
+  .player.random { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .player.heuristic { border-left: 0; border-top: 1px solid var(--rule); }
+  .versus { grid-auto-flow: column; padding: 16px; }
+}
+
+@media (max-width: 560px) {
+  main { width: min(100% - 20px, 360px); padding-top: 22px; }
+  h1 { font-size: 3.25rem; }
+  .player { grid-template-columns: 1fr; justify-items: center; padding: 22px 0 28px; }
+  .identity, dl { width: 220px; }
+  canvas { grid-column: 1; grid-row: auto; }
+  footer { align-items: stretch; flex-direction: column; }
+  footer div { display: grid; grid-template-columns: 1fr 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
