@@ -1,3 +1,5 @@
+import hashlib
+import json
 import shutil
 import unittest
 from pathlib import Path
@@ -33,7 +35,7 @@ class ValidatorTests(unittest.TestCase):
     def test_surface_requires_product_traceability(self):
         fm = {
             "okf_version": "0.2",
-            "opf_version": "0.2.1",
+            "opf_version": "0.2.2",
             "type": "product-concept",
             "opf_id": "opf:test:surface:x",
             "kind": "surface",
@@ -49,7 +51,7 @@ class ValidatorTests(unittest.TestCase):
     def test_observed_acceptance_requires_evidence(self):
         fm = {
             "okf_version": "0.2",
-            "opf_version": "0.2.1",
+            "opf_version": "0.2.2",
             "type": "product-concept",
             "opf_id": "opf:test:acceptance:x",
             "kind": "acceptance",
@@ -62,6 +64,66 @@ class ValidatorTests(unittest.TestCase):
             "acceptance_evidence",
             rules([type("R", (), {"problems": validate_document(fm)})()]),
         )
+
+    def test_local_evidence_closes_validated_lifecycle(self):
+        with TemporaryDirectory() as directory:
+            root = self.copy_example(directory)
+            acceptance = root / "concepts" / "07-acceptance-decision-brief.md"
+            evidence_dir = root / "evidence"
+            evidence_dir.mkdir()
+            receipt = {
+                "subject": "opf:eam:acceptance:decision-brief",
+                "observed_at": "2026-08-07T23:30:00Z",
+                "method": "mechanical fixture proof",
+                "source_revision": "test-revision",
+                "result": "passed",
+                "checks": ["fixture passed"],
+            }
+            payload = (json.dumps(receipt, indent=2) + "\n").encode()
+            evidence_path = evidence_dir / "decision-brief.json"
+            evidence_path.write_bytes(payload)
+            ref = f"file:evidence/decision-brief.json@sha256-{hashlib.sha256(payload).hexdigest()}"
+            acceptance.write_text(
+                acceptance.read_text()
+                .replace("status: proposed", "status: observed")
+                .replace("verified:\n", f"evidence: [{ref}]\nverified:\n")
+            )
+            face = root / "index.md"
+            face.write_text(
+                face.read_text()
+                .replace("status: shaping", "status: validated")
+                .replace("proof: [opf:eam:acceptance:decision-brief]", "proof: [opf:eam:acceptance:decision-brief]\nvalidation: [opf:eam:acceptance:decision-brief]")
+            )
+            self.assertFalse(
+                [report for report in validate_pack(root, strict=True) if report.errors]
+            )
+
+    def test_local_evidence_digest_mismatch_is_rejected(self):
+        with TemporaryDirectory() as directory:
+            root = self.copy_example(directory)
+            acceptance = root / "concepts" / "07-acceptance-decision-brief.md"
+            acceptance.write_text(
+                acceptance.read_text().replace(
+                    "status: proposed",
+                    f"status: observed\nevidence: [file:evidence/proof.json@sha256-{'0' * 64}]",
+                )
+            )
+            evidence_dir = root / "evidence"
+            evidence_dir.mkdir()
+            (evidence_dir / "proof.json").write_text("{}\n")
+            self.assertIn("evidence_digest", rules(validate_pack(root, strict=True)))
+
+    def test_local_evidence_cannot_escape_evidence_directory(self):
+        with TemporaryDirectory() as directory:
+            root = self.copy_example(directory)
+            acceptance = root / "concepts" / "07-acceptance-decision-brief.md"
+            acceptance.write_text(
+                acceptance.read_text().replace(
+                    "status: proposed",
+                    f"status: observed\nevidence: [file:evidence/../proof.json@sha256-{'0' * 64}]",
+                )
+            )
+            self.assertIn("evidence_file_ref", rules(validate_pack(root, strict=True)))
 
     def test_wrong_first_slice_kind_is_rejected(self):
         with TemporaryDirectory() as directory:
@@ -128,7 +190,7 @@ class ValidatorTests(unittest.TestCase):
             )
             outcome = root / "concepts" / "13-outcome-unrelated.md"
             outcome.write_text(
-                '---\nokf_version: "0.2"\nopf_version: "0.2.1"\ntype: product-concept\n'
+                '---\nokf_version: "0.2"\nopf_version: "0.2.2"\ntype: product-concept\n'
                 'opf_id: opf:eam:outcome:unrelated\nkind: outcome\ntitle: "Unrelated"\n'
                 'verified:\n  by: agent:test\n  method: "test"\n---\n'
             )
@@ -153,7 +215,7 @@ class ValidatorTests(unittest.TestCase):
             )
             old = root / "concepts" / "13-problem-old.md"
             old.write_text(
-                '---\nokf_version: "0.2"\nopf_version: "0.2.1"\ntype: product-concept\n'
+                '---\nokf_version: "0.2"\nopf_version: "0.2.2"\ntype: product-concept\n'
                 'opf_id: opf:eam:problem:old\nkind: problem\ntitle: "Old"\n'
                 'verified:\n  by: agent:test\n  method: "test"\n---\n'
             )
@@ -178,7 +240,7 @@ class ValidatorTests(unittest.TestCase):
             root = self.copy_example(directory)
             orphan = root / "concepts" / "13-risk-orphan.md"
             orphan.write_text(
-                '---\nokf_version: "0.2"\nopf_version: "0.2.1"\ntype: product-concept\n'
+                '---\nokf_version: "0.2"\nopf_version: "0.2.2"\ntype: product-concept\n'
                 'opf_id: opf:eam:risk:orphan\nkind: risk\ntitle: "Orphan"\n'
                 "serves: [opf:eam:outcome:protect-attention]\n"
                 'verified:\n  by: agent:test\n  method: "test"\n---\n'

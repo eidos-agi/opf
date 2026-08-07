@@ -1,11 +1,11 @@
 ---
 okf_version: "0.2"
-opf_version: "0.2.1"
+opf_version: "0.2.2"
 profile: opf
 type: product
 opf_id: opf:tetris-ai:product
 title: "Tetris Placement Agent"
-status: shaping
+status: validated
 imports: [emf:tetris-ai@2026-08-07]
 intent: [emf:tetris-ai:autonomous-player@2026-08-07]
 users: [opf:tetris-ai:user:placement-agent]
@@ -15,6 +15,7 @@ outcomes: [opf:tetris-ai:outcome:legal-session]
 first_slice: opf:tetris-ai:slice:heuristic-browser-agent
 non_goals: ["model training", "network inference", "perfect play", "multiplayer", "changing the 001 game engine"]
 proof: [opf:tetris-ai:acceptance:autonomous-session]
+validation: [opf:tetris-ai:acceptance:autonomous-session]
 authority: [opf:tetris-ai:authority:local-browser]
 verified:
   by: human:daniel
@@ -25,4 +26,3 @@ verified:
 # Tetris Placement Agent
 
 A deterministic agent that exposes its decision and plays the shared Tetris engine without human placement input.
-

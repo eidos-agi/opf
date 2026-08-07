@@ -1,0 +1,15 @@
+{
+  "subject": "opf:tetris:acceptance:playable-session",
+  "observed_at": "2026-08-07T23:32:05Z",
+  "method": "logic tests plus desktop and mobile browser exercise",
+  "source_revision": "52a14858dd4f53851ebca59ab2e866d80e00325f",
+  "result": "passed",
+  "checks": [
+    "four game-core tests passed",
+    "left movement and rotation changed the rendered board",
+    "pause displayed the paused state",
+    "repeated hard drops reached game over",
+    "restart restored score zero and hid the overlay",
+    "browser reported no page errors"
+  ]
+}

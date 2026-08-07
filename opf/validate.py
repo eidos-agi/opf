@@ -1,4 +1,4 @@
-"""Validate Open Product Format v0.2.1 documents and packs.
+"""Validate Open Product Format v0.2.2 documents and packs.
 
 Stdlib only. The parser accepts the deliberately small YAML subset OPF specifies
 and fails closed on syntax it cannot represent faithfully.
@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
+import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -60,6 +62,9 @@ EXTERNAL_RE = re.compile(
 IMPORT_RE = re.compile(
     r"^(?P<profile>emf|orf|okf):(?P<pack>[a-z0-9][a-z0-9._-]*)@"
     r"(?P<revision>[A-Za-z0-9._-]+)$"
+)
+LOCAL_EVIDENCE_RE = re.compile(
+    r"^file:(?P<path>evidence/[A-Za-z0-9._/-]+\.json)@sha256-(?P<digest>[a-f0-9]{64})$"
 )
 
 # Field names are edge types. Target kinds are checked mechanically.
@@ -470,6 +475,7 @@ def external_references(fm: dict[str, Any]) -> list[tuple[str, str, set[str]]]:
         (ref_field, item, profiles)
         for ref_field, profiles in EXTERNAL_FIELDS.items()
         for item in _items(fm.get(ref_field))
+        if not item.startswith("file:")
     ]
 
 
@@ -533,6 +539,7 @@ def validate_pack(root: Path, *, strict: bool = False) -> list[Report]:
                 directed[source].add(target)
 
     face_fm = frontmatters.get(face_path, {})
+    _validate_local_evidence(root, frontmatters, report_by_path)
     _validate_external_refs(
         frontmatters, report_by_path, face_fm, face_path, strict=strict
     )
@@ -575,6 +582,68 @@ def validate_pack(root: Path, *, strict: bool = False) -> list[Report]:
                 if problem.level == "warn":
                     problem.level = "error"
     return reports
+
+
+def _validate_local_evidence(
+    root: Path,
+    frontmatters: dict[Path, dict[str, Any]],
+    report_by_path: dict[Path, Report],
+) -> None:
+    for document_path, fm in frontmatters.items():
+        for ref in _items(fm.get("evidence")):
+            if not ref.startswith("file:"):
+                continue
+            match = LOCAL_EVIDENCE_RE.fullmatch(ref)
+            if not match:
+                report_by_path[document_path].problems.append(
+                    Problem("error", "evidence_file_ref", f"invalid local evidence reference {ref}")
+                )
+                continue
+            evidence_path = (root / match.group("path")).resolve()
+            try:
+                evidence_path.relative_to((root / "evidence").resolve())
+            except ValueError:
+                report_by_path[document_path].problems.append(
+                    Problem("error", "evidence_file_ref", f"evidence escapes pack: {ref}")
+                )
+                continue
+            if not evidence_path.is_file():
+                report_by_path[document_path].problems.append(
+                    Problem("error", "evidence_file_missing", match.group("path"))
+                )
+                continue
+            payload = evidence_path.read_bytes()
+            if hashlib.sha256(payload).hexdigest() != match.group("digest"):
+                report_by_path[document_path].problems.append(
+                    Problem("error", "evidence_digest", f"digest mismatch for {match.group('path')}")
+                )
+                continue
+            try:
+                receipt = json.loads(payload)
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                receipt = None
+            required = {"subject", "observed_at", "method", "source_revision", "result"}
+            checks = receipt.get("checks") if isinstance(receipt, dict) else None
+            if (
+                not isinstance(receipt, dict)
+                or any(not isinstance(receipt.get(key), str) or not receipt[key].strip() for key in required)
+                or not isinstance(checks, list)
+                or not checks
+                or any(not isinstance(check, str) or not check.strip() for check in checks)
+            ):
+                report_by_path[document_path].problems.append(
+                    Problem("error", "evidence_receipt", f"incomplete receipt {match.group('path')}")
+                )
+                continue
+            if receipt["subject"] != fm.get("opf_id"):
+                report_by_path[document_path].problems.append(
+                    Problem("error", "evidence_subject", f"receipt subject must be {fm.get('opf_id')}")
+                )
+            expected = {"observed": "passed", "failed": "failed"}.get(str(fm.get("status") or ""))
+            if expected and receipt["result"] != expected:
+                report_by_path[document_path].problems.append(
+                    Problem("error", "evidence_result", f"status requires receipt result {expected!r}")
+                )
 
 
 def _validate_external_refs(
@@ -819,11 +888,12 @@ def selftest() -> int:
         "authority": ["opf:test:authority"],
         "verified": {"by": "human:test", "method": "test"},
     }
-    errors = lambda fm, face=False: {
-        problem.rule
-        for problem in validate_document(fm, face=face)
-        if problem.level == "error"
-    }
+    def errors(fm: dict[str, Any], face: bool = False) -> set[str]:
+        return {
+            problem.rule
+            for problem in validate_document(fm, face=face)
+            if problem.level == "error"
+        }
     assert not errors(base, face=True)
     assert "product_admission" in errors({**base, "proof": ["TBD"]}, face=True)
     assert "version_alignment" in errors({**base, "opf_version": "0.1.9"}, face=True)

@@ -1,6 +1,6 @@
 ---
 okf_version: "0.2"
-opf_version: "0.2.1"
+opf_version: "0.2.2"
 profile: opf
 type: product
 opf_id: opf:eam:product

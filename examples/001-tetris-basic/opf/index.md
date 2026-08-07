@@ -1,11 +1,11 @@
 ---
 okf_version: "0.2"
-opf_version: "0.2.1"
+opf_version: "0.2.2"
 profile: opf
 type: product
 opf_id: opf:tetris:product
 title: "Basic Tetris"
-status: shaping
+status: validated
 imports: [emf:tetris@2026-08-07]
 intent: [emf:tetris:basic-browser-game@2026-08-07]
 users: [opf:tetris:user:solo-player]
@@ -15,6 +15,7 @@ outcomes: [opf:tetris:outcome:complete-lines]
 first_slice: opf:tetris:slice:playable-browser-game
 non_goals: ["accounts", "leaderboards", "multiplayer", "network services", "advanced scoring variants"]
 proof: [opf:tetris:acceptance:playable-session]
+validation: [opf:tetris:acceptance:playable-session]
 authority: [opf:tetris:authority:local-browser]
 verified:
   by: human:daniel

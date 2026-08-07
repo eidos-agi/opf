@@ -1,4 +1,4 @@
-# OPF v0.2.1 — Open Product Format
+# OPF v0.2.2 — Open Product Format
 
 **An additive profile of OKF v0.2.** Every OPF document preserves OKF provenance and trust. OKF renderers may ignore OPF fields and still display the documents.
 
@@ -43,7 +43,7 @@ Folders aid navigation; IDs and typed references define the graph. A 100-documen
 ```yaml
 ---
 okf_version: "0.2"
-opf_version: "0.2.1"
+opf_version: "0.2.2"
 profile: opf
 type: product
 opf_id: opf:eam:product
@@ -163,6 +163,18 @@ evidence: [orf:pack:finding@revision]  # required for observed or failed
 ```
 
 Evidence records an observation; it does not convert product direction into fact.
+Repository-local executable proof may instead use a content-addressed receipt:
+
+```yaml
+evidence: [file:evidence/browser-proof.json@sha256-<64-lowercase-hex-digest>]
+```
+
+The path must remain beneath the pack's `evidence/` directory. The JSON receipt
+must name `subject`, `observed_at`, `method`, `source_revision`, `result`, and a
+nonempty `checks` list. Its subject must equal the acceptance ID, its result must
+agree with `observed` or `failed`, and its SHA-256 digest must match the reference.
+Local receipts are for same-repository mechanical proof; research claims still
+belong in ORF or OKF.
 
 ## 8. External references
 
@@ -180,7 +192,7 @@ The product face declares the closure:
 imports: [emf:eam@2026-08-07, orf:manager-study@a1b2c3d]
 ```
 
-`intent` accepts EMF only. `research` accepts ORF only. `evidence` accepts ORF or OKF. Draft validation warns on unpinned or undeclared externals; `--strict` fails. v0.2.1 validates declared pins but does not fetch remote packs.
+`intent` accepts EMF only. `research` accepts ORF only. External `evidence` accepts ORF or OKF. Draft validation warns on unpinned or undeclared externals; `--strict` fails. v0.2.2 validates local evidence content and declared external pins, but does not fetch remote packs.
 
 ## 9. Validation modes and parser
 
@@ -197,6 +209,7 @@ The validator accepts only the documented YAML subset: scalar values, inline sca
 - Lifecycle, target-kind, first-slice, UX, acceptance, supersession, and parser gates pass.
 - IDs are unique, internal references resolve, and every concept is reachable through directed composition edges.
 - Every document carries OKF `verified.by` and a nonempty `verified.method`.
+- Local evidence receipts are content-addressed, complete, and agree with their acceptance result.
 - Strict validation has no warnings.
 
 ```bash

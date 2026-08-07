@@ -1,0 +1,15 @@
+{
+  "subject": "opf:tetris-ai:acceptance:autonomous-session",
+  "observed_at": "2026-08-07T23:32:05Z",
+  "method": "logic tests plus timed browser mutation observation",
+  "source_revision": "35a30f3d6be0b5cf3f471cde595b278d8b32d438",
+  "result": "passed",
+  "checks": [
+    "ten shared-engine and agent tests passed",
+    "strict OPF validation passed",
+    "browser observed one input at 96, 196, 296, 404, 504, 612, and 712 milliseconds",
+    "piece moved through right and down inputs without teleporting",
+    "pause held the piece count and restart restored it to zero",
+    "decision metrics remained visible and the browser reported no page errors"
+  ]
+}
