@@ -1,0 +1,14 @@
+---
+okf_version: "0.2"
+opf_version: "0.2.2"
+profile: opf
+type: product-log
+opf_id: opf:tetris-smart-arena:log
+product: opf:tetris-smart-arena:product
+---
+
+# Product log
+
+- 2026-08-07: Intelligence difference defined as one-piece scoring versus known-next-piece lookahead.
+- 2026-08-07: Acceptance fixed before browser evidence closure: at least 30 of 50 wins, at least 150 additional lines, greater survival, and zero illegal moves.
+- 2026-08-07: Cohort and browser evidence passed; the product advanced from shaping to validated.

@@ -1,0 +1,18 @@
+{
+  "subject": "opf:tetris-smart-arena:acceptance:lookahead-wins",
+  "observed_at": "2026-08-08T00:03:19Z",
+  "method": "fixed-seed cohort plus timed desktop and mobile browser observation",
+  "source_revision": "sha256:1fbee5eb708398b8b1c03222450d29a0851b89802b6b1c81c1e1c6942dc4bf82",
+  "result": "passed",
+  "checks": [
+    "50 fixed 300-piece matches produced 36 lookahead wins, 4 greedy wins, and 10 draws",
+    "lookahead cleared 5903 aggregate lines versus 5670 for greedy",
+    "lookahead survived all 15000 offered pieces versus 14837 for greedy",
+    "both strategies produced zero illegal placements",
+    "four smart-arena tests passed, including deterministic legality and choice divergence",
+    "canvas mutations followed the 100 ms input clock without teleporting",
+    "the live ledger exposed a T-to-J divergence from greedy column 3 to lookahead column 8 after checking 34 replies",
+    "pause held both canvases and restart reset both agents and divergence count",
+    "desktop and 390-pixel mobile layouts rendered without page errors"
+  ]
+}
