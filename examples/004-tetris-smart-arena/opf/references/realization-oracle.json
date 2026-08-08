@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "subject": "opf:tetris-smart-arena:surface:thought-duel",
+  "source_revision": "sha256:1fbee5eb708398b8b1c03222450d29a0851b89802b6b1c81c1e1c6942dc4bf82",
+  "desktop_viewport": {
+    "width": 1440,
+    "height": 1400
+  },
+  "initial_ledger": {
+    "current_piece": "O",
+    "next_piece": "L",
+    "greedy_column": 9,
+    "greedy_immediate_score": -52,
+    "lookahead_column": 9,
+    "lookahead_future_score": -84,
+    "future_gain": 0,
+    "selected_branch_replies": 34,
+    "choices_changed": 0
+  },
+  "first_visible_divergence": {
+    "piece_index_zero_based": 7,
+    "current_piece": "T",
+    "next_piece": "J",
+    "greedy_column": 3,
+    "lookahead_column": 8,
+    "selected_branch_replies": 34
+  },
+  "fixed_cohort": {
+    "seeds": "1..50",
+    "piece_limit": 300,
+    "lookahead_wins": 36,
+    "greedy_wins": 4,
+    "draws": 10,
+    "lookahead_lines": 5903,
+    "greedy_lines": 5670,
+    "lookahead_pieces": 15000,
+    "greedy_pieces": 14837,
+    "illegal_moves": 0
+  },
+  "interaction": {
+    "action_interval_ms": 100,
+    "maximum_normal_inputs_per_agent_per_tick": 1,
+    "normal_inputs": ["rotate", "left", "right", "down"],
+    "piece_limit": 40,
+    "restart_resets": ["boards", "totals", "divergence_count", "piece_stream"]
+  }
+}

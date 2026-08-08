@@ -1,6 +1,6 @@
 ---
 okf_version: "0.2"
-opf_version: "0.2.2"
+opf_version: "0.2.3"
 profile: opf
 type: product
 opf_id: opf:eam:product
@@ -16,6 +16,7 @@ first_slice: opf:eam:slice:first-orientation
 non_goals: ["ambient surveillance", "replacing native lifecycle authorities"]
 proof: [opf:eam:acceptance:decision-brief]
 authority: [opf:eam:authority:native-systems]
+realization: [opf:eam:contract:realization]
 verified:
   by: human:daniel
   at: 2026-08-07

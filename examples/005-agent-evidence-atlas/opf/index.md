@@ -1,6 +1,6 @@
 ---
 okf_version: "0.2"
-opf_version: "0.2.2"
+opf_version: "0.2.3"
 profile: opf
 type: product
 opf_id: opf:agent-evidence-atlas:product
@@ -17,6 +17,7 @@ non_goals: ["live telemetry", "new agent strategy", "model inference", "claiming
 proof: [opf:agent-evidence-atlas:acceptance:source-backed-atlas]
 validation: [opf:agent-evidence-atlas:acceptance:source-backed-atlas]
 authority: [opf:agent-evidence-atlas:authority:cohort-snapshot]
+realization: [opf:agent-evidence-atlas:contract:realization]
 verified:
   by: human:daniel
   at: 2026-08-07

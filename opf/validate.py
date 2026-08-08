@@ -1,4 +1,4 @@
-"""Validate Open Product Format v0.2.2 documents and packs.
+"""Validate Open Product Format v0.2.3 documents and packs.
 
 Stdlib only. The parser accepts the deliberately small YAML subset OPF specifies
 and fails closed on syntax it cannot represent faithfully.
@@ -66,6 +66,25 @@ IMPORT_RE = re.compile(
 LOCAL_EVIDENCE_RE = re.compile(
     r"^file:(?P<path>evidence/[A-Za-z0-9._/-]+\.json)@sha256-(?P<digest>[a-f0-9]{64})$"
 )
+LOCAL_REFERENCE_RE = re.compile(
+    r"^file:(?P<path>references/[A-Za-z0-9._/-]+)@sha256-(?P<digest>[a-f0-9]{64})$"
+)
+REALIZATION_FIDELITIES = {
+    "intent-equivalent",
+    "behaviorally-equivalent",
+    "reference-faithful",
+}
+FIDELITY_DIMENSIONS = {
+    "visual-composition",
+    "content",
+    "interaction",
+    "interaction-timing",
+    "explanation-semantics",
+    "deterministic-output",
+    "accessibility",
+    "performance",
+    "physical-form",
+}
 
 # Field names are edge types. Target kinds are checked mechanically.
 EDGE_TARGET_KINDS: dict[str, set[str]] = {
@@ -78,6 +97,7 @@ EDGE_TARGET_KINDS: dict[str, set[str]] = {
     "validation": {"acceptance"},
     "operational_proof": {"acceptance"},
     "authority": {"authority-boundary"},
+    "realization": {"contract"},
     "actor": {"user"},
     "outcome": {"outcome"},
     "journeys": {"journey"},
@@ -125,6 +145,7 @@ COMPOSITION_FIELDS = {
     "validation",
     "operational_proof",
     "authority",
+    "realization",
     "journeys",
     "moments",
     "on_surface",
@@ -366,6 +387,7 @@ def _validate_face(fm: dict[str, Any], problems: list[Problem]) -> None:
             "non_goals",
             "proof",
             "authority",
+            "realization",
         }
         for missing in _missing(fm, required):
             problems.append(
@@ -459,6 +481,39 @@ def _validate_concept(fm: dict[str, Any], problems: list[Problem]) -> None:
                     f"status {status!r} requires evidence",
                 )
             )
+    if kind == "contract" and str(fm.get("contract_type") or "") == "realization":
+        for missing in _missing(fm, {"applies_to", "dimensions", "fidelity", "proof"}):
+            problems.append(
+                Problem("error", "realization_contract", f"realization contract requires {missing}")
+            )
+        fidelity = str(fm.get("fidelity") or "")
+        if fidelity not in REALIZATION_FIDELITIES:
+            problems.append(
+                Problem(
+                    "error",
+                    "realization_fidelity",
+                    f"fidelity must be one of {sorted(REALIZATION_FIDELITIES)}",
+                )
+            )
+        dimensions = _items(fm.get("dimensions"))
+        invalid_dimensions = sorted(set(dimensions) - FIDELITY_DIMENSIONS)
+        if invalid_dimensions:
+            problems.append(
+                Problem(
+                    "error",
+                    "realization_dimensions",
+                    f"unsupported dimensions {invalid_dimensions}",
+                )
+            )
+        if fidelity == "reference-faithful":
+            for missing in _missing(fm, {"references", "tolerances"}):
+                problems.append(
+                    Problem(
+                        "error",
+                        "reference_fidelity",
+                        f"reference-faithful contract requires {missing}",
+                    )
+                )
 
 
 def internal_references(fm: dict[str, Any]) -> list[tuple[str, str]]:
@@ -540,6 +595,7 @@ def validate_pack(root: Path, *, strict: bool = False) -> list[Report]:
 
     face_fm = frontmatters.get(face_path, {})
     _validate_local_evidence(root, frontmatters, report_by_path)
+    _validate_local_references(root, frontmatters, report_by_path)
     _validate_external_refs(
         frontmatters, report_by_path, face_fm, face_path, strict=strict
     )
@@ -646,6 +702,39 @@ def _validate_local_evidence(
                 )
 
 
+def _validate_local_references(
+    root: Path,
+    frontmatters: dict[Path, dict[str, Any]],
+    report_by_path: dict[Path, Report],
+) -> None:
+    reference_root = (root / "references").resolve()
+    for document_path, fm in frontmatters.items():
+        for ref in _items(fm.get("references")):
+            match = LOCAL_REFERENCE_RE.fullmatch(ref)
+            if not match:
+                report_by_path[document_path].problems.append(
+                    Problem("error", "reference_file_ref", f"invalid reference {ref}")
+                )
+                continue
+            reference_path = (root / match.group("path")).resolve()
+            try:
+                reference_path.relative_to(reference_root)
+            except ValueError:
+                report_by_path[document_path].problems.append(
+                    Problem("error", "reference_file_ref", f"reference escapes pack: {ref}")
+                )
+                continue
+            if not reference_path.is_file():
+                report_by_path[document_path].problems.append(
+                    Problem("error", "reference_file_missing", match.group("path"))
+                )
+                continue
+            if hashlib.sha256(reference_path.read_bytes()).hexdigest() != match.group("digest"):
+                report_by_path[document_path].problems.append(
+                    Problem("error", "reference_digest", f"digest mismatch for {match.group('path')}")
+                )
+
+
 def _validate_external_refs(
     frontmatters: dict[Path, dict[str, Any]],
     report_by_path: dict[Path, Report],
@@ -742,6 +831,16 @@ def _validate_lifecycle(
 ) -> None:
     status = str(face_fm.get("status") or "")
     if status in {"shaping", "building", "validated", "operating"}:
+        for contract_id in _items(face_fm.get("realization")):
+            contract = fm_by_id.get(contract_id, {})
+            if contract and str(contract.get("contract_type") or "") != "realization":
+                report_by_path[face_path].problems.append(
+                    Problem(
+                        "error",
+                        "realization_contract_type",
+                        f"{contract_id} must declare contract_type: realization",
+                    )
+                )
         _validate_first_slice(face_fm, fm_by_id, kind_by_id, face_path, report_by_path)
     if status == "validated":
         _require_observed(face_fm, "validation", fm_by_id, face_path, report_by_path)
@@ -780,6 +879,12 @@ def _validate_first_slice(
     face_path: Path,
     report_by_path: dict[Path, Report],
 ) -> None:
+    realized_surfaces = {
+        surface_id
+        for contract_id in _items(face_fm.get("realization"))
+        if str(fm_by_id.get(contract_id, {}).get("contract_type") or "") == "realization"
+        for surface_id in _items(fm_by_id.get(contract_id, {}).get("applies_to"))
+    }
     slice_ids = _items(face_fm.get("first_slice"))
     if len(slice_ids) != 1:
         report_by_path[face_path].problems.append(
@@ -822,6 +927,17 @@ def _validate_first_slice(
                 continue
             for surface_id in _items(moment.get("on_surface")):
                 surface = fm_by_id.get(surface_id, {})
+                if (
+                    str(surface.get("surface_kind") or "") == "screen"
+                    and surface_id not in realized_surfaces
+                ):
+                    report_by_path[face_path].problems.append(
+                        Problem(
+                            "error",
+                            "realization_coverage",
+                            f"screen surface {surface_id} needs a face-level realization contract",
+                        )
+                    )
                 surface_proof = _items(surface.get("proof"))
                 for state_id in _items(surface.get("states")):
                     state = fm_by_id.get(state_id, {})
@@ -886,6 +1002,7 @@ def selftest() -> int:
         "non_goals": ["Not everything"],
         "proof": ["opf:test:acceptance"],
         "authority": ["opf:test:authority"],
+        "realization": ["opf:test:contract"],
         "verified": {"by": "human:test", "method": "test"},
     }
     def errors(fm: dict[str, Any], face: bool = False) -> set[str]:

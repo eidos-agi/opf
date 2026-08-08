@@ -1,6 +1,6 @@
 ---
 okf_version: "0.2"
-opf_version: "0.2.2"
+opf_version: "0.2.3"
 profile: opf
 type: product
 opf_id: opf:tetris-ai-arena:product
@@ -17,6 +17,7 @@ non_goals: ["model inference", "learning", "perfect play", "changing examples 00
 proof: [opf:tetris-ai-arena:acceptance:heuristic-beats-random]
 validation: [opf:tetris-ai-arena:acceptance:heuristic-beats-random]
 authority: [opf:tetris-ai-arena:authority:local-evaluator]
+realization: [opf:tetris-ai-arena:contract:realization]
 verified:
   by: human:daniel
   at: 2026-08-07

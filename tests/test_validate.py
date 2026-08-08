@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 from opf.validate import parse_frontmatter, validate_document, validate_pack
 
 EXAMPLE = Path(__file__).parents[1] / "examples" / "eidos-agent-manager"
+SMART_ARENA = Path(__file__).parents[1] / "examples" / "004-tetris-smart-arena" / "opf"
 
 
 def rules(reports):
@@ -35,7 +36,7 @@ class ValidatorTests(unittest.TestCase):
     def test_surface_requires_product_traceability(self):
         fm = {
             "okf_version": "0.2",
-            "opf_version": "0.2.2",
+            "opf_version": "0.2.3",
             "type": "product-concept",
             "opf_id": "opf:test:surface:x",
             "kind": "surface",
@@ -51,7 +52,7 @@ class ValidatorTests(unittest.TestCase):
     def test_observed_acceptance_requires_evidence(self):
         fm = {
             "okf_version": "0.2",
-            "opf_version": "0.2.2",
+            "opf_version": "0.2.3",
             "type": "product-concept",
             "opf_id": "opf:test:acceptance:x",
             "kind": "acceptance",
@@ -190,7 +191,7 @@ class ValidatorTests(unittest.TestCase):
             )
             outcome = root / "concepts" / "13-outcome-unrelated.md"
             outcome.write_text(
-                '---\nokf_version: "0.2"\nopf_version: "0.2.2"\ntype: product-concept\n'
+                '---\nokf_version: "0.2"\nopf_version: "0.2.3"\ntype: product-concept\n'
                 'opf_id: opf:eam:outcome:unrelated\nkind: outcome\ntitle: "Unrelated"\n'
                 'verified:\n  by: agent:test\n  method: "test"\n---\n'
             )
@@ -215,7 +216,7 @@ class ValidatorTests(unittest.TestCase):
             )
             old = root / "concepts" / "13-problem-old.md"
             old.write_text(
-                '---\nokf_version: "0.2"\nopf_version: "0.2.2"\ntype: product-concept\n'
+                '---\nokf_version: "0.2"\nopf_version: "0.2.3"\ntype: product-concept\n'
                 'opf_id: opf:eam:problem:old\nkind: problem\ntitle: "Old"\n'
                 'verified:\n  by: agent:test\n  method: "test"\n---\n'
             )
@@ -240,12 +241,76 @@ class ValidatorTests(unittest.TestCase):
             root = self.copy_example(directory)
             orphan = root / "concepts" / "13-risk-orphan.md"
             orphan.write_text(
-                '---\nokf_version: "0.2"\nopf_version: "0.2.2"\ntype: product-concept\n'
+                '---\nokf_version: "0.2"\nopf_version: "0.2.3"\ntype: product-concept\n'
                 'opf_id: opf:eam:risk:orphan\nkind: risk\ntitle: "Orphan"\n'
                 "serves: [opf:eam:outcome:protect-attention]\n"
                 'verified:\n  by: agent:test\n  method: "test"\n---\n'
             )
             self.assertIn("orphan", rules(validate_pack(root, strict=True)))
+
+    def test_active_product_requires_realization_contract(self):
+        with TemporaryDirectory() as directory:
+            root = self.copy_example(directory)
+            face = root / "index.md"
+            face.write_text(
+                face.read_text().replace(
+                    "realization: [opf:eam:contract:realization]\n", ""
+                )
+            )
+            self.assertIn("product_admission", rules(validate_pack(root, strict=True)))
+
+    def test_reference_fidelity_requires_references_and_tolerances(self):
+        fm = {
+            "okf_version": "0.2",
+            "opf_version": "0.2.3",
+            "type": "product-concept",
+            "opf_id": "opf:test:contract:realization",
+            "kind": "contract",
+            "contract_type": "realization",
+            "title": "Reference realization",
+            "applies_to": "opf:test:surface:x",
+            "fidelity": "reference-faithful",
+            "dimensions": ["visual-composition"],
+            "proof": "opf:test:acceptance:x",
+            "verified": {"by": "agent:test", "method": "test"},
+        }
+        self.assertIn(
+            "reference_fidelity",
+            rules([type("R", (), {"problems": validate_document(fm)})()]),
+        )
+
+    def test_reference_tampering_is_rejected(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory) / "pack"
+            shutil.copytree(SMART_ARENA, root)
+            oracle = root / "references" / "realization-oracle.json"
+            oracle.write_text(oracle.read_text() + "\n")
+            self.assertIn("reference_digest", rules(validate_pack(root, strict=True)))
+
+    def test_first_slice_screen_requires_realization_coverage(self):
+        with TemporaryDirectory() as directory:
+            root = self.copy_example(directory)
+            contract = root / "concepts" / "13-contract-realization.md"
+            contract.write_text(
+                contract.read_text().replace(
+                    "applies_to: opf:eam:surface:executive-brief",
+                    "applies_to: opf:eam:state:conflicting",
+                )
+            )
+            self.assertIn("realization_coverage", rules(validate_pack(root, strict=True)))
+
+    def test_face_realization_cannot_point_to_a_generic_contract(self):
+        with TemporaryDirectory() as directory:
+            root = self.copy_example(directory)
+            contract = root / "concepts" / "13-contract-realization.md"
+            contract.write_text(
+                contract.read_text().replace(
+                    "contract_type: realization", "contract_type: generic"
+                )
+            )
+            self.assertIn(
+                "realization_contract_type", rules(validate_pack(root, strict=True))
+            )
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 ---
 okf_version: "0.2"
-opf_version: "0.2.2"
+opf_version: "0.2.3"
 profile: opf
 type: product
 opf_id: opf:tetris-smart-arena:product
@@ -17,6 +17,7 @@ non_goals: ["model inference", "learning", "unknown-piece prediction", "perfect 
 proof: [opf:tetris-smart-arena:acceptance:lookahead-wins]
 validation: [opf:tetris-smart-arena:acceptance:lookahead-wins]
 authority: [opf:tetris-smart-arena:authority:local-evaluator]
+realization: [opf:tetris-smart-arena:contract:realization]
 verified:
   by: human:daniel
   at: 2026-08-07

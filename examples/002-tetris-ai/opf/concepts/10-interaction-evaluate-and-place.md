@@ -1,6 +1,6 @@
 ---
 okf_version: "0.2"
-opf_version: "0.2.2"
+opf_version: "0.2.3"
 type: product-concept
 opf_id: opf:tetris-ai:interaction:evaluate-and-place
 kind: interaction

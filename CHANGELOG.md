@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.3 — 2026-08-07
+
+- Add required realization contracts so product packs distinguish intent, behavioral, and reference fidelity.
+- Require content-addressed reference artifacts and explicit tolerances before claiming a reference-faithful realization.
+- Add first-slice screen coverage and reference-tamper validation.
+- Upgrade example 004 with a pinned desktop composition and structured deterministic oracle after a blind rebuild passed behavioral gates while changing the product.
+
 ## 0.2.2 — 2026-08-07
 
 - Add content-addressed local evidence receipts for executable product proof.

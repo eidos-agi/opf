@@ -1,4 +1,4 @@
-# OPF v0.2.2 — Open Product Format
+# OPF v0.2.3 — Open Product Format
 
 **An additive profile of OKF v0.2.** Every OPF document preserves OKF provenance and trust. OKF renderers may ignore OPF fields and still display the documents.
 
@@ -21,6 +21,7 @@ OPF composes these formats; it does not merge them. Human intent remains an EMF 
 | Existing systems get rebuilt because boundaries are vague | Authority boundaries and non-goals are required before shaping |
 | A roadmap contains activity but no falsifiable outcome | Every active product names outcomes, one first slice, and acceptance proof |
 | UX arrives as screenshots after engineering | The first slice contains a mechanically complete experience path |
+| A rebuild passes behavioral tests but materially changes the product | Every active product declares a realization contract; reference-faithful claims pin visual and semantic oracles |
 | Large product corpora accumulate connected sludge | Only directed composition edges make documents members of the product definition |
 
 ## 2. Unit of distribution
@@ -34,6 +35,7 @@ docs/opf/
   concepts/                # atomic product and UX concepts
     *.md
   evidence/                # optional extracts; prefer pinned ORF/OKF links
+  references/              # optional content-addressed realization oracles
 ```
 
 Folders aid navigation; IDs and typed references define the graph. A 100-document product remains one pack when it has one promise and authority boundary. Split a component when it can be governed, versioned, or retired independently. Cross-pack targets must be declared in the face's `imports` closure.
@@ -43,7 +45,7 @@ Folders aid navigation; IDs and typed references define the graph. A 100-documen
 ```yaml
 ---
 okf_version: "0.2"
-opf_version: "0.2.2"
+opf_version: "0.2.3"
 profile: opf
 type: product
 opf_id: opf:eam:product
@@ -59,6 +61,7 @@ first_slice: opf:eam:slice:first-orientation
 non_goals: ["ambient surveillance", "replacing native lifecycle authorities"]
 proof: [opf:eam:acceptance:decision-brief]
 authority: [opf:eam:authority:native-systems]
+realization: [opf:eam:contract:realization]
 verified:
   by: human:daniel
   at: 2026-08-07
@@ -74,7 +77,7 @@ verified:
 | status | mechanical meaning |
 |---|---|
 | `concept` | named product face; incomplete structure allowed |
-| `shaping` | intent, users, problem, promise, outcomes, first slice, non-goals, proof, and authority resolve; first experience path is complete |
+| `shaping` | intent, users, problem, promise, outcomes, first slice, non-goals, proof, authority, and realization resolve; first experience path is complete |
 | `validated` | shaping plus `validation` pointing to at least one `acceptance` with `status: observed` and pinned evidence |
 | `building` | shaping contract admitted for implementation; the first slice remains complete and falsifiable |
 | `operating` | building contract plus `operational_proof` pointing to observed acceptance |
@@ -142,6 +145,44 @@ user -> outcome -> journey -> moment -> surface -> state -> interaction -> outco
 
 Screenshots, Figma frames, CAD files, copy decks, analytics events, sensor logs, and WCAG audit bodies remain in their native systems. OPF records the product commitment and typed pointer, not the full artifact.
 
+### Realization fidelity
+
+Every active product face points through `realization` to at least one `contract`
+with `contract_type: realization`. The contract covers the first-slice screen
+surface through `applies_to` and states what a future implementation must preserve:
+
+```yaml
+kind: contract
+contract_type: realization
+applies_to: opf:arena:surface:duel
+fidelity: reference-faithful
+dimensions: [visual-composition, content, interaction-timing, explanation-semantics, deterministic-output]
+references: [file:references/desktop.png@sha256-<64-lowercase-hex-digest>]
+tolerances: ["font rasterization and device pixel ratio only"]
+proof: opf:arena:acceptance:duel
+```
+
+`fidelity` is one of:
+
+| value | claim |
+|---|---|
+| `intent-equivalent` | preserves the product purpose; realization remains open |
+| `behaviorally-equivalent` | preserves the listed observable behavior; visual identity is not implied |
+| `reference-faithful` | preserves every listed dimension against pinned references within declared tolerances |
+
+Allowed dimensions are `visual-composition`, `content`, `interaction`,
+`interaction-timing`, `explanation-semantics`, `deterministic-output`,
+`accessibility`, `performance`, and `physical-form`.
+
+A `reference-faithful` contract requires content-addressed `references` and
+nonempty `tolerances`. A screenshot alone does not define explanation semantics,
+and a passing behavioral threshold does not define visual fidelity. Pin the
+smallest set of visual, content, state, timing, and deterministic oracles needed
+to make the listed dimensions independently testable. Repository-local references
+use `file:references/<path>@sha256-<digest>` and may contain images, JSON, text, or
+other stable artifacts. The validator checks containment and digest; the contract's
+acceptance proof checks the realization against them.
+
 ## 7. Slices and acceptance
 
 A `slice` declares:
@@ -192,7 +233,7 @@ The product face declares the closure:
 imports: [emf:eam@2026-08-07, orf:manager-study@a1b2c3d]
 ```
 
-`intent` accepts EMF only. `research` accepts ORF only. External `evidence` accepts ORF or OKF. Draft validation warns on unpinned or undeclared externals; `--strict` fails. v0.2.2 validates local evidence content and declared external pins, but does not fetch remote packs.
+`intent` accepts EMF only. `research` accepts ORF only. External `evidence` accepts ORF or OKF. Draft validation warns on unpinned or undeclared externals; `--strict` fails. v0.2.3 validates local evidence and reference content plus declared external pins, but does not fetch remote packs.
 
 ## 9. Validation modes and parser
 
@@ -209,6 +250,8 @@ The validator accepts only the documented YAML subset: scalar values, inline sca
 - Lifecycle, target-kind, first-slice, UX, acceptance, supersession, and parser gates pass.
 - IDs are unique, internal references resolve, and every concept is reachable through directed composition edges.
 - Every document carries OKF `verified.by` and a nonempty `verified.method`.
+- Every active face declares realization fidelity, and each first-slice screen is covered by it.
+- Reference-faithful contracts pin local reference artifacts and state tolerances.
 - Local evidence receipts are content-addressed, complete, and agree with their acceptance result.
 - Strict validation has no warnings.
 

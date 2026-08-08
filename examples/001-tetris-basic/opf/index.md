@@ -1,6 +1,6 @@
 ---
 okf_version: "0.2"
-opf_version: "0.2.2"
+opf_version: "0.2.3"
 profile: opf
 type: product
 opf_id: opf:tetris:product
@@ -17,6 +17,7 @@ non_goals: ["accounts", "leaderboards", "multiplayer", "network services", "adva
 proof: [opf:tetris:acceptance:playable-session]
 validation: [opf:tetris:acceptance:playable-session]
 authority: [opf:tetris:authority:local-browser]
+realization: [opf:tetris:contract:realization]
 verified:
   by: human:daniel
   at: 2026-08-07

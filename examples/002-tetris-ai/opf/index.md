@@ -1,6 +1,6 @@
 ---
 okf_version: "0.2"
-opf_version: "0.2.2"
+opf_version: "0.2.3"
 profile: opf
 type: product
 opf_id: opf:tetris-ai:product
@@ -17,6 +17,7 @@ non_goals: ["model training", "network inference", "perfect play", "multiplayer"
 proof: [opf:tetris-ai:acceptance:autonomous-session]
 validation: [opf:tetris-ai:acceptance:autonomous-session]
 authority: [opf:tetris-ai:authority:local-browser]
+realization: [opf:tetris-ai:contract:realization]
 verified:
   by: human:daniel
   at: 2026-08-07
