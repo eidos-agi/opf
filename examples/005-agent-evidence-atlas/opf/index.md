@@ -1,6 +1,6 @@
 ---
 okf_version: "0.2"
-opf_version: "0.2.3"
+opf_version: "0.2.4"
 profile: opf
 type: product
 opf_id: opf:agent-evidence-atlas:product
@@ -18,6 +18,7 @@ proof: [opf:agent-evidence-atlas:acceptance:source-backed-atlas]
 validation: [opf:agent-evidence-atlas:acceptance:source-backed-atlas]
 authority: [opf:agent-evidence-atlas:authority:cohort-snapshot]
 realization: [opf:agent-evidence-atlas:contract:realization]
+experience_quality: [opf:agent-evidence-atlas:contract:experience-quality]
 verified:
   by: human:daniel
   at: 2026-08-07

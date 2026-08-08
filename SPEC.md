@@ -1,4 +1,4 @@
-# OPF v0.2.3 — Open Product Format
+# OPF v0.2.4 — Open Product Format
 
 **An additive profile of OKF v0.2.** Every OPF document preserves OKF provenance and trust. OKF renderers may ignore OPF fields and still display the documents.
 
@@ -21,7 +21,7 @@ OPF composes these formats; it does not merge them. Human intent remains an EMF 
 | Existing systems get rebuilt because boundaries are vague | Authority boundaries and non-goals are required before shaping |
 | A roadmap contains activity but no falsifiable outcome | Every active product names outcomes, one first slice, and acceptance proof |
 | UX arrives as screenshots after engineering | The first slice contains a mechanically complete experience path |
-| A rebuild passes behavioral tests but materially changes the product | Every active product declares a realization contract; reference-faithful claims pin visual and semantic oracles |
+| A rebuild passes behavioral tests but materially degrades the product | Every active product declares realization fidelity and a project-wide experience-quality contract with proof |
 | Large product corpora accumulate connected sludge | Only directed composition edges make documents members of the product definition |
 
 ## 2. Unit of distribution
@@ -45,7 +45,7 @@ Folders aid navigation; IDs and typed references define the graph. A 100-documen
 ```yaml
 ---
 okf_version: "0.2"
-opf_version: "0.2.3"
+opf_version: "0.2.4"
 profile: opf
 type: product
 opf_id: opf:eam:product
@@ -62,6 +62,7 @@ non_goals: ["ambient surveillance", "replacing native lifecycle authorities"]
 proof: [opf:eam:acceptance:decision-brief]
 authority: [opf:eam:authority:native-systems]
 realization: [opf:eam:contract:realization]
+experience_quality: [opf:eam:contract:experience-quality]
 verified:
   by: human:daniel
   at: 2026-08-07
@@ -77,7 +78,7 @@ verified:
 | status | mechanical meaning |
 |---|---|
 | `concept` | named product face; incomplete structure allowed |
-| `shaping` | intent, users, problem, promise, outcomes, first slice, non-goals, proof, authority, and realization resolve; first experience path is complete |
+| `shaping` | intent, users, problem, promise, outcomes, first slice, non-goals, proof, authority, realization, and experience quality resolve; first experience path is complete |
 | `validated` | shaping plus `validation` pointing to at least one `acceptance` with `status: observed` and pinned evidence |
 | `building` | shaping contract admitted for implementation; the first slice remains complete and falsifiable |
 | `operating` | building contract plus `operational_proof` pointing to observed acceptance |
@@ -116,6 +117,7 @@ Field names are edge types. The validator checks both direction and target kind.
 | `first_slice` | `slice` |
 | `proof`, `covered_by`, `validation`, `operational_proof` | `acceptance` |
 | `authority` | `authority-boundary` |
+| `realization`, `experience_quality` | `contract` |
 | `moments` | `moment` |
 | `on_surface`, `surfaces`, `of_surface` | `surface` |
 | `states` | `state` |
@@ -168,6 +170,7 @@ proof: opf:arena:acceptance:duel
 |---|---|
 | `intent-equivalent` | preserves the product purpose; realization remains open |
 | `behaviorally-equivalent` | preserves the listed observable behavior; visual identity is not implied |
+| `experience-equivalent` | preserves listed behavior and the project-wide experience-quality contract; byte and pixel identity are not implied |
 | `reference-faithful` | preserves every listed dimension against pinned references within declared tolerances |
 
 Allowed dimensions are `visual-composition`, `content`, `interaction`,
@@ -182,6 +185,37 @@ to make the listed dimensions independently testable. Repository-local reference
 use `file:references/<path>@sha256-<digest>` and may contain images, JSON, text, or
 other stable artifacts. The validator checks containment and digest; the contract's
 acceptance proof checks the realization against them.
+
+### Project-wide experience quality
+
+Every active product face also points through `experience_quality` to a contract
+with `contract_type: experience-quality` and `scope: product`. This is the
+whole-product quality bar, not a per-screen checklist:
+
+```yaml
+kind: contract
+contract_type: experience-quality
+scope: product
+qualities: [operability, usability, clarity, readability, visual-cleanliness, consistency, experiential-character]
+requirements:
+  - operability=all primary paths work without invalid state
+  - usability=a first-time user can complete the primary journey without instructions
+  - clarity=purpose, state, choices, and consequences are immediately distinguishable
+  - readability=content and controls remain legible across supported viewports
+  - visual-cleanliness=the primary hierarchy dominates decorative material
+  - consistency=vocabulary, visual roles, spacing, and interactions retain one system
+  - experiential-character=the product feels calm, exact, and intentional rather than generic
+assurance: hybrid
+proof: opf:product:acceptance:first-slice
+```
+
+The validator requires all seven qualities and exactly one nonempty requirement
+for each. `assurance` is `mechanical`, `human`, or `hybrid`; because experiential
+character cannot be established honestly by syntax alone, a complete contract
+must use human or hybrid assurance. For `validated` and `operating` products,
+each experience-quality contract must point to observed acceptance proof. The
+validator guarantees declared coverage, linkage, and proof status; the linked
+human review supplies the judgment for experiential character.
 
 ## 7. Slices and acceptance
 
@@ -233,7 +267,7 @@ The product face declares the closure:
 imports: [emf:eam@2026-08-07, orf:manager-study@a1b2c3d]
 ```
 
-`intent` accepts EMF only. `research` accepts ORF only. External `evidence` accepts ORF or OKF. Draft validation warns on unpinned or undeclared externals; `--strict` fails. v0.2.3 validates local evidence and reference content plus declared external pins, but does not fetch remote packs.
+`intent` accepts EMF only. `research` accepts ORF only. External `evidence` accepts ORF or OKF. Draft validation warns on unpinned or undeclared externals; `--strict` fails. v0.2.4 validates local evidence and reference content plus declared external pins, but does not fetch remote packs.
 
 ## 9. Validation modes and parser
 
@@ -251,6 +285,7 @@ The validator accepts only the documented YAML subset: scalar values, inline sca
 - IDs are unique, internal references resolve, and every concept is reachable through directed composition edges.
 - Every document carries OKF `verified.by` and a nonempty `verified.method`.
 - Every active face declares realization fidelity, and each first-slice screen is covered by it.
+- Every active face declares all seven project-wide experience qualities with human or hybrid assurance; validated and operating products link observed proof.
 - Reference-faithful contracts pin local reference artifacts and state tolerances.
 - Local evidence receipts are content-addressed, complete, and agree with their acceptance result.
 - Strict validation has no warnings.

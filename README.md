@@ -11,7 +11,7 @@ OPF — product commitments, UX, slices, and proof
 
 OPF keeps human intent in EMF and research in ORF. It links pinned revisions of those sources, then records the product promise, outcomes, constraints, directed experience, first slice, and falsifiable proof.
 
-OPF v0.2.3 also makes realization fidelity explicit. A pack must say whether a build is intent-equivalent, behaviorally equivalent, or reference-faithful; only the last may claim faithful reconstruction, and it requires pinned visual or semantic oracles plus tolerances.
+OPF v0.2.4 makes realization fidelity and project-wide experience quality explicit. A pack must say whether a build is intent-equivalent, behaviorally equivalent, experience-equivalent, or reference-faithful. It must also define and prove operability, usability, clarity, readability, visual cleanliness, consistency, and experiential character across the product—not merely reproduce bytes or pixels.
 
 ```bash
 python3 -m opf.validate --selftest
@@ -23,6 +23,6 @@ python3 -m opf.validate --strict examples/eidos-agent-manager
 # done
 ```
 
-Strict validation enforces typed target kinds, directed product reachability, distinct lifecycle gates, a complete first-slice UX path, pinned evidence and external imports, and explicit supersession.
+Strict validation enforces typed target kinds, directed product reachability, distinct lifecycle gates, a complete first-slice UX path, project-wide experience-quality coverage and proof, pinned evidence and external imports, and explicit supersession.
 
 See [SPEC.md](SPEC.md) and the [Eidos Agent Manager example](examples/eidos-agent-manager/index.md).

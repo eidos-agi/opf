@@ -262,6 +262,93 @@ class ValidatorTests(unittest.TestCase):
             )
             self.assertIn("product_admission", rules(validate_pack(root, strict=True)))
 
+    def test_active_product_requires_experience_quality_contract(self):
+        with TemporaryDirectory() as directory:
+            root = self.copy_example(directory)
+            face = root / "index.md"
+            face.write_text(
+                face.read_text().replace(
+                    "experience_quality: [opf:eam:contract:experience-quality]\n", ""
+                )
+            )
+            self.assertIn("product_admission", rules(validate_pack(root, strict=True)))
+
+    def test_experience_quality_requires_every_dimension_and_requirement(self):
+        fm = {
+            "okf_version": "0.2",
+            "opf_version": "0.2.3",
+            "type": "product-concept",
+            "opf_id": "opf:test:contract:experience-quality",
+            "kind": "contract",
+            "contract_type": "experience-quality",
+            "title": "Incomplete quality contract",
+            "scope": "product",
+            "qualities": ["operability"],
+            "requirements": ["operability=it works"],
+            "assurance": "hybrid",
+            "proof": "opf:test:acceptance:x",
+            "verified": {"by": "agent:test", "method": "test"},
+        }
+        found = rules([type("R", (), {"problems": validate_document(fm)})()])
+        self.assertIn("experience_quality_dimensions", found)
+        self.assertIn("experience_quality_requirements", found)
+
+    def test_experiential_character_requires_human_review(self):
+        fm = {
+            "okf_version": "0.2",
+            "opf_version": "0.2.3",
+            "type": "product-concept",
+            "opf_id": "opf:test:contract:experience-quality",
+            "kind": "contract",
+            "contract_type": "experience-quality",
+            "title": "Mechanically asserted vibe",
+            "scope": "product",
+            "qualities": [
+                "operability",
+                "usability",
+                "clarity",
+                "readability",
+                "visual-cleanliness",
+                "consistency",
+                "experiential-character",
+            ],
+            "requirements": [
+                "operability=works",
+                "usability=usable",
+                "clarity=clear",
+                "readability=readable",
+                "visual-cleanliness=clean",
+                "consistency=consistent",
+                "experiential-character=distinctive",
+            ],
+            "assurance": "mechanical",
+            "proof": "opf:test:acceptance:x",
+            "verified": {"by": "agent:test", "method": "test"},
+        }
+        self.assertIn(
+            "experience_quality_human_review",
+            rules([type("R", (), {"problems": validate_document(fm)})()]),
+        )
+        fm["assurance"] = "hybrid"
+        fm["qualities"].append("operability")
+        fm["requirements"].append(" operability =duplicate")
+        found = rules([type("R", (), {"problems": validate_document(fm)})()])
+        self.assertIn("experience_quality_dimensions", found)
+        self.assertIn("experience_quality_requirements", found)
+
+    def test_validated_product_requires_observed_experience_quality_proof(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory) / "pack"
+            shutil.copytree(SMART_ARENA, root)
+            acceptance = root / "concepts" / "13-acceptance-lookahead-wins.md"
+            acceptance.write_text(
+                acceptance.read_text().replace("status: observed", "status: proposed")
+            )
+            self.assertIn(
+                "experience_quality_not_observed",
+                rules(validate_pack(root, strict=True)),
+            )
+
     def test_reference_fidelity_requires_references_and_tolerances(self):
         fm = {
             "okf_version": "0.2",

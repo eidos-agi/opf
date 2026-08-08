@@ -10,3 +10,4 @@ OPF is an additive OKF profile, not a product-management application or document
 - Run strict validation before publication and bump the OPF patch version for profile-only contract changes.
 - Add a field or rule only for an observed failure; keep the validator stdlib-only.
 - Do not call a realization faithful unless its contract is reference-faithful and its pinned visual and semantic oracles pass.
+- Prefer experience-equivalent when the product must preserve operability, UX, clarity, cleanliness, consistency, and character without requiring byte or pixel identity.

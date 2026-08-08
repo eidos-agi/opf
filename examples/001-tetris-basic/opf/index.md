@@ -1,6 +1,6 @@
 ---
 okf_version: "0.2"
-opf_version: "0.2.3"
+opf_version: "0.2.4"
 profile: opf
 type: product
 opf_id: opf:tetris:product
@@ -18,6 +18,7 @@ proof: [opf:tetris:acceptance:playable-session]
 validation: [opf:tetris:acceptance:playable-session]
 authority: [opf:tetris:authority:local-browser]
 realization: [opf:tetris:contract:realization]
+experience_quality: [opf:tetris:contract:experience-quality]
 verified:
   by: human:daniel
   at: 2026-08-07

@@ -14,7 +14,7 @@
     "the live ledger exposed a T-to-J divergence from greedy column 3 to lookahead column 8 after checking 34 replies",
     "pause held both canvases and restart reset both agents and divergence count",
     "desktop and 390-pixel mobile layouts rendered without page errors",
-    "the 1440 by 1400 realization matched reference sha256 2494f0d5f29f4ea4522f4831e08b5cacda597ea94f2dcfaae0d86b3866ac8802 within the declared rendering tolerance",
+    "hybrid desktop and narrow-viewport review found the surface operable, usable, clear, readable, visually clean, internally consistent, and faithful to the editorial technical-laboratory character represented by reference sha256 2494f0d5f29f4ea4522f4831e08b5cacda597ea94f2dcfaae0d86b3866ac8802",
     "ledger semantics and deterministic outputs matched oracle sha256 b91589f41eb36ed2e17882951e911c9309405f4dac82a627147c1469acac6ae5"
   ]
 }

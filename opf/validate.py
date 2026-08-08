@@ -1,4 +1,4 @@
-"""Validate Open Product Format v0.2.3 documents and packs.
+"""Validate Open Product Format v0.2.4 documents and packs.
 
 Stdlib only. The parser accepts the deliberately small YAML subset OPF specifies
 and fails closed on syntax it cannot represent faithfully.
@@ -550,7 +550,9 @@ def _validate_concept(fm: dict[str, Any], problems: list[Problem]) -> None:
                 Problem("error", "experience_quality_scope", "scope must be product")
             )
         qualities = _items(fm.get("qualities"))
-        if set(qualities) != EXPERIENCE_QUALITIES:
+        if set(qualities) != EXPERIENCE_QUALITIES or len(qualities) != len(
+            EXPERIENCE_QUALITIES
+        ):
             missing = sorted(EXPERIENCE_QUALITIES - set(qualities))
             unsupported = sorted(set(qualities) - EXPERIENCE_QUALITIES)
             problems.append(
@@ -564,15 +566,16 @@ def _validate_concept(fm: dict[str, Any], problems: list[Problem]) -> None:
         malformed: list[str] = []
         for item in _items(fm.get("requirements")):
             dimension, separator, criterion = item.partition("=")
+            dimension = dimension.strip()
             if (
                 not separator
-                or not dimension.strip()
+                or not dimension
                 or not criterion.strip()
                 or dimension in requirements
             ):
                 malformed.append(item)
                 continue
-            requirements[dimension.strip()] = criterion.strip()
+            requirements[dimension] = criterion.strip()
         if set(requirements) != EXPERIENCE_QUALITIES or malformed:
             problems.append(
                 Problem(

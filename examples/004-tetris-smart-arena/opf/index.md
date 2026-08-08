@@ -1,6 +1,6 @@
 ---
 okf_version: "0.2"
-opf_version: "0.2.3"
+opf_version: "0.2.4"
 profile: opf
 type: product
 opf_id: opf:tetris-smart-arena:product
@@ -18,6 +18,7 @@ proof: [opf:tetris-smart-arena:acceptance:lookahead-wins]
 validation: [opf:tetris-smart-arena:acceptance:lookahead-wins]
 authority: [opf:tetris-smart-arena:authority:local-evaluator]
 realization: [opf:tetris-smart-arena:contract:realization]
+experience_quality: [opf:tetris-smart-arena:contract:experience-quality]
 verified:
   by: human:daniel
   at: 2026-08-07

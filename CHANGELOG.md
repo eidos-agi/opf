@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.4 — 2026-08-07
+
+- Add experience-equivalent realization and required project-wide contracts for operability, usability, clarity, readability, visual cleanliness, consistency, and experiential character.
+- Require human or hybrid assurance for experiential character and observed quality proof at validated or operating lifecycle states.
+- Reclassify example 004 around experience equivalence: pinned visual references guide the product while deterministic oracles and hybrid review prove it.
+
 ## 0.2.3 — 2026-08-07
 
 - Add required realization contracts so product packs distinguish intent, behavioral, and reference fidelity.
