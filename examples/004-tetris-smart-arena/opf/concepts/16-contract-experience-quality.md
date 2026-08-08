@@ -1,6 +1,6 @@
 ---
 okf_version: "0.2"
-opf_version: "0.2.4"
+opf_version: "0.2.5"
 type: product-concept
 opf_id: opf:tetris-smart-arena:contract:experience-quality
 kind: contract

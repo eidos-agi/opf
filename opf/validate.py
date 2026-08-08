@@ -1,4 +1,4 @@
-"""Validate Open Product Format v0.2.4 documents and packs.
+"""Validate Open Product Format v0.2.5 documents and packs.
 
 Stdlib only. The parser accepts the deliberately small YAML subset OPF specifies
 and fails closed on syntax it cannot represent faithfully.
@@ -69,6 +69,7 @@ LOCAL_EVIDENCE_RE = re.compile(
 LOCAL_REFERENCE_RE = re.compile(
     r"^file:(?P<path>references/[A-Za-z0-9._/-]+)@sha256-(?P<digest>[a-f0-9]{64})$"
 )
+REVIEW_REVISION_RE = re.compile(r"^sha256:[a-f0-9]{64}$")
 REALIZATION_FIDELITIES = {
     "intent-equivalent",
     "behaviorally-equivalent",
@@ -96,6 +97,7 @@ EXPERIENCE_QUALITIES = {
     "experiential-character",
 }
 QUALITY_ASSURANCE = {"mechanical", "human", "hybrid"}
+MIN_SUPPORTED_OPF_VERSION = (0, 2, 1)
 
 # Field names are edge types. Target kinds are checked mechanically.
 EDGE_TARGET_KINDS: dict[str, set[str]] = {
@@ -110,6 +112,7 @@ EDGE_TARGET_KINDS: dict[str, set[str]] = {
     "authority": {"authority-boundary"},
     "realization": {"contract"},
     "experience_quality": {"contract"},
+    "reviewed_surfaces": {"surface"},
     "actor": {"user"},
     "outcome": {"outcome"},
     "journeys": {"journey"},
@@ -319,6 +322,12 @@ def _missing(fm: dict[str, Any], fields: set[str]) -> list[str]:
     )
 
 
+def _version_tuple(value: str) -> tuple[int, int, int] | None:
+    if not re.fullmatch(r"\d+\.\d+\.\d+", value):
+        return None
+    return tuple(int(part) for part in value.split("."))
+
+
 def validate_document(fm: dict[str, Any], *, face: bool = False) -> list[Problem]:
     problems = [
         Problem("error", "frontmatter_parse", detail)
@@ -333,15 +342,28 @@ def validate_document(fm: dict[str, Any], *, face: bool = False) -> list[Problem
             Problem("error", "okf_base", f"okf_version must be {OKF_VERSION!r}")
         )
     opf_version = str(fm.get("opf_version") or "")
-    if not re.fullmatch(r"\d+\.\d+\.\d+", opf_version):
+    declared_version = _version_tuple(opf_version)
+    if declared_version is None:
         problems.append(Problem("error", "opf_version", "opf_version must use X.Y.Z"))
     elif ".".join(opf_version.split(".")[:2]) != okf_version:
         problems.append(
             Problem("error", "version_alignment", "OPF major.minor must match OKF")
         )
-    elif opf_version != OPF_VERSION:
+    elif declared_version < MIN_SUPPORTED_OPF_VERSION:
         problems.append(
-            Problem("warn", "opf_version", f"validator implements {OPF_VERSION}")
+            Problem(
+                "warn",
+                "opf_version",
+                f"document uses unsupported legacy {opf_version}; migrate to 0.2.1 or newer",
+            )
+        )
+    elif declared_version > _version_tuple(OPF_VERSION):
+        problems.append(
+            Problem(
+                "warn",
+                "opf_version",
+                f"document requires {opf_version}; validator implements {OPF_VERSION}",
+            )
         )
 
     if fm.get("type") not in TYPES:
@@ -400,9 +422,16 @@ def _validate_face(fm: dict[str, Any], problems: list[Problem]) -> None:
             "non_goals",
             "proof",
             "authority",
-            "realization",
-            "experience_quality",
         }
+        face_version = _version_tuple(str(fm.get("opf_version") or "")) or (0, 0, 0)
+        if face_version >= (0, 2, 3):
+            required.add("realization")
+        if face_version >= (
+            0,
+            2,
+            4,
+        ):
+            required.add("experience_quality")
         for missing in _missing(fm, required):
             problems.append(
                 Problem(
@@ -805,6 +834,15 @@ def _validate_local_evidence(
                         f"receipt subject must be {fm.get('opf_id')}",
                     )
                 )
+            reviewed_revision = str(fm.get("reviewed_revision") or "")
+            if reviewed_revision and receipt["source_revision"] != reviewed_revision:
+                report_by_path[document_path].problems.append(
+                    Problem(
+                        "error",
+                        "experience_quality_revision_mismatch",
+                        "reviewed_revision must match the pinned receipt source_revision",
+                    )
+                )
             expected = {"observed": "passed", "failed": "failed"}.get(
                 str(fm.get("status") or "")
             )
@@ -954,6 +992,7 @@ def _validate_lifecycle(
     report_by_path: dict[Path, Report],
 ) -> None:
     status = str(face_fm.get("status") or "")
+    face_version = _version_tuple(str(face_fm.get("opf_version") or "")) or (0, 0, 0)
     if status in {"shaping", "building", "validated", "operating"}:
         for contract_id in _items(face_fm.get("realization")):
             contract = fm_by_id.get(contract_id, {})
@@ -980,15 +1019,42 @@ def _validate_lifecycle(
                 )
             if status in {"validated", "operating"} and contract:
                 proofs = _items(contract.get("proof"))
-                if not any(
-                    str(fm_by_id.get(proof, {}).get("status") or "") == "observed"
+                observed_proofs = [
+                    fm_by_id[proof]
                     for proof in proofs
-                ):
+                    if proof in fm_by_id
+                    and str(fm_by_id[proof].get("status") or "") == "observed"
+                ]
+                if not observed_proofs:
                     report_by_path[face_path].problems.append(
                         Problem(
                             "error",
                             "experience_quality_not_observed",
                             f"{contract_id} needs observed acceptance proof",
+                        )
+                    )
+                elif face_version >= (0, 2, 5) and not any(
+                    set(_items(proof.get("quality_coverage"))) == EXPERIENCE_QUALITIES
+                    and len(_items(proof.get("quality_coverage")))
+                    == len(EXPERIENCE_QUALITIES)
+                    and any(
+                        reviewer.startswith("human:") and len(reviewer) > 6
+                        for reviewer in _items(proof.get("reviewed_by"))
+                    )
+                    and any(
+                        kind_by_id.get(surface) == "surface"
+                        for surface in _items(proof.get("reviewed_surfaces"))
+                    )
+                    and REVIEW_REVISION_RE.fullmatch(
+                        str(proof.get("reviewed_revision") or "")
+                    )
+                    for proof in observed_proofs
+                ):
+                    report_by_path[face_path].problems.append(
+                        Problem(
+                            "error",
+                            "experience_quality_review_missing",
+                            f"{contract_id} needs observed proof covering all qualities with a human reviewer, surface, and pinned revision",
                         )
                     )
         _validate_first_slice(face_fm, fm_by_id, kind_by_id, face_path, report_by_path)
@@ -1029,6 +1095,9 @@ def _validate_first_slice(
     face_path: Path,
     report_by_path: dict[Path, Report],
 ) -> None:
+    requires_realization = (
+        _version_tuple(str(face_fm.get("opf_version") or "")) or (0, 0, 0)
+    ) >= (0, 2, 3)
     realized_surfaces = {
         surface_id
         for contract_id in _items(face_fm.get("realization"))
@@ -1079,7 +1148,8 @@ def _validate_first_slice(
             for surface_id in _items(moment.get("on_surface")):
                 surface = fm_by_id.get(surface_id, {})
                 if (
-                    str(surface.get("surface_kind") or "") == "screen"
+                    requires_realization
+                    and str(surface.get("surface_kind") or "") == "screen"
                     and surface_id not in realized_surfaces
                 ):
                     report_by_path[face_path].problems.append(

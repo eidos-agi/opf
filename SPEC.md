@@ -1,4 +1,4 @@
-# OPF v0.2.4 — Open Product Format
+# OPF v0.2.5 — Open Product Format
 
 **An additive profile of OKF v0.2.** Every OPF document preserves OKF provenance and trust. OKF renderers may ignore OPF fields and still display the documents.
 
@@ -45,7 +45,7 @@ Folders aid navigation; IDs and typed references define the graph. A 100-documen
 ```yaml
 ---
 okf_version: "0.2"
-opf_version: "0.2.4"
+opf_version: "0.2.5"
 profile: opf
 type: product
 opf_id: opf:eam:product
@@ -217,6 +217,21 @@ each experience-quality contract must point to observed acceptance proof. The
 validator guarantees declared coverage, linkage, and proof status; the linked
 human review supplies the judgment for experiential character.
 
+Beginning with a 0.2.5 product face, observed quality proof also declares:
+
+```yaml
+quality_coverage: [operability, usability, clarity, readability, visual-cleanliness, consistency, experiential-character]
+reviewed_by: [human:daniel]
+reviewed_surfaces: [opf:product:surface:first-slice]
+reviewed_revision: sha256:<64-lowercase-hex-digest>
+```
+
+The validator requires exact coverage, a named `human:` principal, at least one
+resolved surface, and a pinned revision. These fields prove that accountable
+review occurred against a specific build surface; they do not convert aesthetic
+judgment into a mechanical fact. When proof uses a repository-local receipt,
+`reviewed_revision` must equal that receipt's `source_revision`.
+
 ## 7. Slices and acceptance
 
 A `slice` declares:
@@ -267,13 +282,22 @@ The product face declares the closure:
 imports: [emf:eam@2026-08-07, orf:manager-study@a1b2c3d]
 ```
 
-`intent` accepts EMF only. `research` accepts ORF only. External `evidence` accepts ORF or OKF. Draft validation warns on unpinned or undeclared externals; `--strict` fails. v0.2.4 validates local evidence and reference content plus declared external pins, but does not fetch remote packs.
+`intent` accepts EMF only. `research` accepts ORF only. External `evidence` accepts ORF or OKF. Draft validation warns on unpinned or undeclared externals; `--strict` fails. v0.2.5 validates local evidence and reference content plus declared external pins, but does not fetch remote packs.
 
 ## 9. Validation modes and parser
 
 Default mode is draft: all local structure, target kinds, directed reachability, lifecycle, experience, and supersession rules apply; external pin/import defects warn.
 
 `--strict` additionally turns every warning into an error and requires all external references to be pinned and imported. Strict validation is the publication gate.
+
+The supported compatibility floor is OPF 0.2.1. A 0.2.5 validator accepts
+stable 0.2.1–0.2.4 concept documents in the same pack; the
+product face's patch version selects lifecycle admission fields introduced by a
+later patch. A document declaring a patch newer than the validator warns in draft
+mode and fails strict validation. The 0.2.0 baseline predates the hardened UX
+semantics and likewise requires migration before strict publication. This
+preserves atomic concept history without silently ignoring contracts the
+installed validator does not understand.
 
 The validator accepts only the documented YAML subset: scalar values, inline scalar lists, indented scalar lists, and nested maps such as `verified`. Duplicate keys, tabs, multiline scalars, inline maps, lists of maps, and malformed lines fail closed. This restriction keeps the validator dependency-free and deterministic.
 

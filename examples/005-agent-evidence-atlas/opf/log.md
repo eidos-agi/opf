@@ -13,3 +13,4 @@ product: opf:agent-evidence-atlas:product
 - 2026-08-07: Portable analytics delivery selected so source, charts, semantic fallback, and snapshot remain in one self-contained file.
 - 2026-08-07: Data, source, and portable package gates passed; the product advanced from shaping to validated with the enhanced-browser limitation disclosed.
 - 2026-08-07: Realization classified as behaviorally equivalent; source-backed meaning is fixed while visual identity remains open.
+- 2026-08-07: Product-wide experience-quality requirements and hybrid proof added for OPF 0.2.4.

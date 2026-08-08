@@ -9,6 +9,11 @@ from opf.validate import parse_frontmatter, validate_document, validate_pack
 
 EXAMPLE = Path(__file__).parents[1] / "examples" / "eidos-agent-manager"
 SMART_ARENA = Path(__file__).parents[1] / "examples" / "004-tetris-smart-arena" / "opf"
+EXAMPLE_PACKS = sorted(
+    path
+    for path in (Path(__file__).parents[1] / "examples").glob("*/opf")
+    if (path / "index.md").is_file()
+) + [EXAMPLE]
 
 
 def rules(reports):
@@ -21,10 +26,16 @@ class ValidatorTests(unittest.TestCase):
         shutil.copytree(EXAMPLE, root)
         return root
 
-    def test_example_is_strict_valid(self):
-        self.assertFalse(
-            [report for report in validate_pack(EXAMPLE, strict=True) if report.errors]
-        )
+    def test_all_examples_are_strict_valid(self):
+        for pack in EXAMPLE_PACKS:
+            with self.subTest(pack=pack):
+                self.assertFalse(
+                    [
+                        report
+                        for report in validate_pack(pack, strict=True)
+                        if report.errors
+                    ]
+                )
 
     def test_parser_rejects_duplicate_keys(self):
         fm = parse_frontmatter('---\ntitle: "A"\ntitle: "B"\n---\n')
@@ -32,6 +43,91 @@ class ValidatorTests(unittest.TestCase):
             "frontmatter_parse",
             rules([type("R", (), {"problems": validate_document(fm)})()]),
         )
+
+    def test_previous_patch_documents_remain_compatible(self):
+        fm = {
+            "okf_version": "0.2",
+            "opf_version": "0.2.3",
+            "type": "product-concept",
+            "opf_id": "opf:test:user:legacy",
+            "kind": "user",
+            "title": "Legacy user",
+            "verified": {"by": "agent:test", "method": "compatibility test"},
+        }
+        self.assertNotIn(
+            "opf_version",
+            rules([type("R", (), {"problems": validate_document(fm)})()]),
+        )
+
+    def test_future_patch_requires_a_newer_validator(self):
+        fm = {
+            "okf_version": "0.2",
+            "opf_version": "0.2.6",
+            "type": "product-concept",
+            "opf_id": "opf:test:user:future",
+            "kind": "user",
+            "title": "Future user",
+            "verified": {"by": "agent:test", "method": "compatibility test"},
+        }
+        problems = validate_document(fm)
+        self.assertTrue(
+            any(
+                problem.rule == "opf_version" and problem.level == "warn"
+                for problem in problems
+            )
+        )
+
+    def test_020_baseline_requires_migration(self):
+        fm = {
+            "okf_version": "0.2",
+            "opf_version": "0.2.0",
+            "type": "product-concept",
+            "opf_id": "opf:test:user:baseline",
+            "kind": "user",
+            "title": "Baseline user",
+            "verified": {"by": "agent:test", "method": "compatibility test"},
+        }
+        problems = validate_document(fm)
+        self.assertTrue(
+            any(
+                problem.rule == "opf_version" and problem.level == "warn"
+                for problem in problems
+            )
+        )
+
+    def test_022_face_does_not_require_023_realization(self):
+        with TemporaryDirectory() as directory:
+            root = self.copy_example(directory)
+            face = root / "index.md"
+            face.write_text(
+                face.read_text()
+                .replace('opf_version: "0.2.4"', 'opf_version: "0.2.2"')
+                .replace("realization: [opf:eam:contract:realization]\n", "")
+                .replace(
+                    "experience_quality: [opf:eam:contract:experience-quality]\n", ""
+                )
+            )
+            (root / "concepts" / "13-contract-realization.md").unlink()
+            (root / "concepts" / "14-contract-experience-quality.md").unlink()
+            self.assertFalse(
+                [report for report in validate_pack(root, strict=True) if report.errors]
+            )
+
+    def test_023_face_does_not_require_024_experience_quality(self):
+        with TemporaryDirectory() as directory:
+            root = self.copy_example(directory)
+            face = root / "index.md"
+            face.write_text(
+                face.read_text()
+                .replace('opf_version: "0.2.4"', 'opf_version: "0.2.3"')
+                .replace(
+                    "experience_quality: [opf:eam:contract:experience-quality]\n", ""
+                )
+            )
+            (root / "concepts" / "14-contract-experience-quality.md").unlink()
+            self.assertFalse(
+                [report for report in validate_pack(root, strict=True) if report.errors]
+            )
 
     def test_surface_requires_product_traceability(self):
         fm = {
@@ -346,6 +442,41 @@ class ValidatorTests(unittest.TestCase):
             )
             self.assertIn(
                 "experience_quality_not_observed",
+                rules(validate_pack(root, strict=True)),
+            )
+
+    def test_025_quality_review_requires_coverage_reviewer_surface_and_revision(self):
+        defects = {
+            "reviewer": "reviewed_by: [human:daniel]\n",
+            "surface": "reviewed_surfaces: [opf:tetris-smart-arena:surface:thought-duel]\n",
+            "revision": "reviewed_revision: sha256:1fbee5eb708398b8b1c03222450d29a0851b89802b6b1c81c1e1c6942dc4bf82\n",
+            "coverage": "consistency, experiential-character]",
+        }
+        for name, text in defects.items():
+            with self.subTest(defect=name), TemporaryDirectory() as directory:
+                root = Path(directory) / "pack"
+                shutil.copytree(SMART_ARENA, root)
+                acceptance = root / "concepts" / "13-acceptance-lookahead-wins.md"
+                replacement = "consistency]" if name == "coverage" else ""
+                acceptance.write_text(acceptance.read_text().replace(text, replacement))
+                self.assertIn(
+                    "experience_quality_review_missing",
+                    rules(validate_pack(root, strict=True)),
+                )
+
+    def test_025_reviewed_revision_matches_pinned_receipt(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory) / "pack"
+            shutil.copytree(SMART_ARENA, root)
+            acceptance = root / "concepts" / "13-acceptance-lookahead-wins.md"
+            acceptance.write_text(
+                acceptance.read_text().replace(
+                    "reviewed_revision: sha256:1fbee5eb708398b8b1c03222450d29a0851b89802b6b1c81c1e1c6942dc4bf82",
+                    f"reviewed_revision: sha256:{'0' * 64}",
+                )
+            )
+            self.assertIn(
+                "experience_quality_revision_mismatch",
                 rules(validate_pack(root, strict=True)),
             )
 

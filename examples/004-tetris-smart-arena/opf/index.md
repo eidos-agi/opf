@@ -1,6 +1,6 @@
 ---
 okf_version: "0.2"
-opf_version: "0.2.4"
+opf_version: "0.2.5"
 profile: opf
 type: product
 opf_id: opf:tetris-smart-arena:product

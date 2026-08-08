@@ -1,0 +1,29 @@
+name: validate
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: python3 -m opf.validate --selftest
+      - run: PYTHONPATH=. python3 -m unittest discover -s tests -q
+      - run: |
+          for pack in examples/*/opf examples/eidos-agent-manager; do
+            [ ! -f "$pack/index.md" ] || python3 -m opf.validate --strict "$pack"
+          done
+      - run: |
+          node --test examples/001-tetris-basic/code/game-core.test.mjs
+          node --test examples/002-tetris-ai/code/ai-core.test.mjs
+          node --test examples/003-tetris-ai-arena/code/arena-core.test.mjs
+          node --test examples/004-tetris-smart-arena/code/smart-core.test.mjs
+          node --test examples/005-agent-evidence-atlas/code/artifact.test.mjs

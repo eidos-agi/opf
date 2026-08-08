@@ -11,7 +11,7 @@ OPF — product commitments, UX, slices, and proof
 
 OPF keeps human intent in EMF and research in ORF. It links pinned revisions of those sources, then records the product promise, outcomes, constraints, directed experience, first slice, and falsifiable proof.
 
-OPF v0.2.4 makes realization fidelity and project-wide experience quality explicit. A pack must say whether a build is intent-equivalent, behaviorally equivalent, experience-equivalent, or reference-faithful. It must also define and prove operability, usability, clarity, readability, visual cleanliness, consistency, and experiential character across the product—not merely reproduce bytes or pixels.
+OPF v0.2.5 makes realization fidelity and project-wide experience quality explicit. A pack must say whether a build is intent-equivalent, behaviorally equivalent, experience-equivalent, or reference-faithful. It must also define and prove operability, usability, clarity, readability, visual cleanliness, consistency, and experiential character across the product—not merely reproduce bytes or pixels. Human or hybrid quality proof names the reviewer, reviewed surfaces, and pinned build revision.
 
 ```bash
 python3 -m opf.validate --selftest
