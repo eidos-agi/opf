@@ -195,6 +195,7 @@ class Report:
 
 
 def parse_frontmatter(text: str) -> dict[str, Any]:
+    """Parse the small YAML-compatible frontmatter subset used by OPF documents."""
     if not text.startswith("---"):
         return {"__parse_errors__": ["missing opening frontmatter delimiter"]}
     end = text.find("\n---", 3)
@@ -329,6 +330,7 @@ def _version_tuple(value: str) -> tuple[int, int, int] | None:
 
 
 def validate_document(fm: dict[str, Any], *, face: bool = False) -> list[Problem]:
+    """Validate one parsed OPF document and return all discovered problems."""
     problems = [
         Problem("error", "frontmatter_parse", detail)
         for detail in fm.get("__parse_errors__", [])
@@ -633,6 +635,7 @@ def _validate_concept(fm: dict[str, Any], problems: list[Problem]) -> None:
 
 
 def internal_references(fm: dict[str, Any]) -> list[tuple[str, str]]:
+    """Return internal OPF references paired with their source field."""
     return [
         (ref_field, item)
         for ref_field in REF_FIELDS
@@ -642,6 +645,7 @@ def internal_references(fm: dict[str, Any]) -> list[tuple[str, str]]:
 
 
 def external_references(fm: dict[str, Any]) -> list[tuple[str, str, set[str]]]:
+    """Return external references with their source field and allowed profiles."""
     return [
         (ref_field, item, profiles)
         for ref_field, profiles in EXTERNAL_FIELDS.items()
@@ -651,6 +655,7 @@ def external_references(fm: dict[str, Any]) -> list[tuple[str, str, set[str]]]:
 
 
 def validate_pack(root: Path, *, strict: bool = False) -> list[Report]:
+    """Validate one OPF pack rooted at a directory containing index.md."""
     root = root.resolve()
     face_path = root / "index.md"
     if not face_path.is_file():
@@ -1198,6 +1203,7 @@ def _validate_first_slice(
 
 
 def validate_path(path: Path, *, strict: bool = False) -> list[Report]:
+    """Validate an OPF document or complete pack path."""
     if path.is_dir():
         return validate_pack(path, strict=strict)
     if path.is_file():
@@ -1207,6 +1213,7 @@ def validate_path(path: Path, *, strict: bool = False) -> list[Report]:
 
 
 def selftest() -> int:
+    """Run dependency-free smoke checks for the validator's critical gates."""
     base = {
         "okf_version": OKF_VERSION,
         "opf_version": OPF_VERSION,
@@ -1256,6 +1263,7 @@ def selftest() -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Run the OPF validator command-line interface."""
     parser = argparse.ArgumentParser(prog="opf.validate", description=__doc__)
     parser.add_argument("paths", nargs="*", type=Path)
     parser.add_argument("--selftest", action="store_true")

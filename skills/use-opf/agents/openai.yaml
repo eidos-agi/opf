@@ -1,0 +1,4 @@
+interface:
+  display_name: "Use OPF"
+  short_description: "Define and validate evidence-backed products"
+  default_prompt: "Use $use-opf to define or validate this product as an OPF pack."

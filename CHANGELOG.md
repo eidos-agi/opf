@@ -1,7 +1,11 @@
 # Changelog
 
+All notable changes to this project are documented here. The format is based on
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
 ## 0.2.5 — 2026-08-07
 
+- Complete public open-source packaging, community-health documentation, and a validated `use-opf` agent skill.
 - Require observed quality proof to cover all seven dimensions and name a human reviewer, reviewed surface, and content-addressed build revision.
 - Keep the validator epistemically honest: it verifies review provenance and coverage, while the attributed human supplies experiential judgment.
 - Strict-validate every shipped pack and execute every example test suite in CI.

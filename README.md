@@ -1,6 +1,11 @@
 # Open Product Format
 
+[![CI](https://github.com/eidos-agi/opf/actions/workflows/validate.yml/badge.svg)](https://github.com/eidos-agi/opf/actions/workflows/validate.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 OPF is an additive profile of OKF v0.2 for defining products as linked, testable concepts rather than monolithic PRDs.
+
+![OPF reference product: smart Tetris arena](https://raw.githubusercontent.com/eidos-agi/opf/main/examples/004-tetris-smart-arena/opf/references/desktop-1440x1400.png)
 
 ```text
 OKF — knowledge and trust
@@ -13,10 +18,20 @@ OPF keeps human intent in EMF and research in ORF. It links pinned revisions of 
 
 OPF v0.2.5 makes realization fidelity and project-wide experience quality explicit. A pack must say whether a build is intent-equivalent, behaviorally equivalent, experience-equivalent, or reference-faithful. It must also define and prove operability, usability, clarity, readability, visual cleanliness, consistency, and experiential character across the product—not merely reproduce bytes or pixels. Human or hybrid quality proof names the reviewer, reviewed surfaces, and pinned build revision.
 
+## Install
+
 ```bash
-python3 -m opf.validate --selftest
-PYTHONPATH=. python3 -m unittest discover -s tests -q
-python3 -m opf.validate --strict examples/eidos-agent-manager
+git clone https://github.com/eidos-agi/opf.git
+cd opf
+python -m pip install -e ".[dev]"
+```
+
+## Use
+
+```bash
+opf-validate --selftest
+opf-validate --strict examples/eidos-agent-manager
+python3 -m unittest discover -s tests -q
 # all example packs:
 # for p in examples/*/opf examples/eidos-agent-manager; do
 #   [ -f "$p/index.md" ] && python3 -m opf.validate --strict "$p"
@@ -24,5 +39,21 @@ python3 -m opf.validate --strict examples/eidos-agent-manager
 ```
 
 Strict validation enforces typed target kinds, directed product reachability, distinct lifecycle gates, a complete first-slice UX path, project-wide experience-quality coverage and proof, pinned evidence and external imports, and explicit supersession.
+
+## Agent integration
+
+Agents can invoke `opf-validate --strict <pack>` as a deterministic publication
+gate. Exit status `0` means every document passed; nonzero output names each
+path, rule, severity, and actionable failure detail.
+
+For guided product-definition work, use the bundled [`use-opf` skill](skills/use-opf/SKILL.md).
+
+## Contributing and security
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) to develop OPF. Report vulnerabilities
+using [SECURITY.md](SECURITY.md). Participation follows our
+[Code of Conduct](CODE_OF_CONDUCT.md).
+
+OPF is released under the [MIT License](LICENSE).
 
 See [SPEC.md](SPEC.md) and the [Eidos Agent Manager example](examples/eidos-agent-manager/index.md).
