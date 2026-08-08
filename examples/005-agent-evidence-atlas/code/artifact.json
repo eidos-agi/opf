@@ -1,0 +1,459 @@
+{
+  "surface": "dashboard",
+  "manifest": {
+    "version": 1,
+    "surface": "dashboard",
+    "title": "Agent Evidence Atlas",
+    "description": "Four maxims for making autonomous-agent claims falsifiable, demonstrated by the OPF Tetris series.",
+    "generatedAt": "2026-08-08T00:10:00Z",
+    "cards": [
+      {
+        "id": "baseline_wins",
+        "description": "The one-piece heuristic beat the legal random control on every fixed seed.",
+        "dataset": "headline",
+        "sourceId": "cohort_pipeline",
+        "metrics": [
+          {
+            "label": "Baseline wins",
+            "field": "baseline_win_rate",
+            "format": "percent"
+          },
+          {
+            "label": "Matches",
+            "field": "baseline_matches",
+            "format": "number"
+          }
+        ]
+      },
+      {
+        "id": "foresight_lift",
+        "description": "Additional cleared lines from seeing one known piece further ahead.",
+        "dataset": "headline",
+        "sourceId": "cohort_pipeline",
+        "metrics": [
+          {
+            "label": "Line lift from foresight",
+            "field": "line_lift",
+            "format": "percent",
+            "signed": true
+          },
+          {
+            "label": "Extra lines",
+            "field": "extra_lines",
+            "format": "number",
+            "signed": true
+          }
+        ]
+      },
+      {
+        "id": "survival_gain",
+        "description": "Extra legal placements completed by lookahead across the same 50 streams.",
+        "dataset": "headline",
+        "sourceId": "cohort_pipeline",
+        "metrics": [
+          {
+            "label": "Survival gain",
+            "field": "extra_pieces",
+            "format": "number",
+            "signed": true
+          },
+          {
+            "label": "Lookahead pieces",
+            "field": "lookahead_pieces",
+            "format": "number"
+          }
+        ]
+      },
+      {
+        "id": "illegal_moves",
+        "description": "Invalid placements across both comparison cohorts.",
+        "dataset": "headline",
+        "sourceId": "cohort_pipeline",
+        "metrics": [
+          {
+            "label": "Illegal placements",
+            "field": "illegal_moves",
+            "format": "number"
+          },
+          {
+            "label": "Fixed-seed matches",
+            "field": "total_matches",
+            "format": "number"
+          }
+        ]
+      }
+    ],
+    "charts": [
+      {
+        "id": "baseline_lines",
+        "title": "Aggregate lines by baseline strategy",
+        "subtitle": "50 fixed seeds · 300-piece ceiling per match · absolute line count starts at zero",
+        "type": "bar",
+        "dataset": "baseline_summary",
+        "sourceId": "cohort_pipeline",
+        "intent": "comparison",
+        "question": "Does the heuristic add value beyond merely choosing a legal move?",
+        "rationale": "A zero-based bar comparison makes the enormous baseline gap visible without transforming the scale.",
+        "palette": {
+          "kind": "semantic",
+          "name": "baseline-versus-candidate"
+        },
+        "labels": {
+          "values": "all"
+        },
+        "encodings": {
+          "x": {
+            "field": "agent",
+            "type": "nominal",
+            "label": "Strategy"
+          },
+          "y": {
+            "field": "lines",
+            "type": "quantitative",
+            "label": "Lines cleared"
+          },
+          "tooltip": [
+            {
+              "field": "pieces",
+              "type": "quantitative",
+              "label": "Pieces placed"
+            },
+            {
+              "field": "wins",
+              "type": "quantitative",
+              "label": "Match wins"
+            }
+          ]
+        },
+        "layout": "half"
+      },
+      {
+        "id": "foresight_record",
+        "title": "Depth-two match outcomes",
+        "subtitle": "Lookahead result against the depth-one heuristic · 50 fixed seeds",
+        "type": "bar",
+        "dataset": "foresight_outcomes",
+        "sourceId": "cohort_pipeline",
+        "intent": "composition",
+        "question": "How consistently does one-piece lookahead outperform the existing expert?",
+        "rationale": "Outcome counts distinguish wins, ties, and losses without hiding the four seeds where lookahead was worse.",
+        "palette": {
+          "kind": "categorical",
+          "name": "outcome-counts"
+        },
+        "labels": {
+          "values": "all"
+        },
+        "encodings": {
+          "x": {
+            "field": "outcome",
+            "type": "nominal",
+            "label": "Lookahead outcome"
+          },
+          "y": {
+            "field": "matches",
+            "type": "quantitative",
+            "label": "Matches"
+          }
+        },
+        "layout": "half"
+      },
+      {
+        "id": "delta_distribution",
+        "title": "Per-seed line difference from foresight",
+        "subtitle": "Lookahead lines minus greedy lines · all 50 fixed seeds · zero means a draw",
+        "type": "bar",
+        "dataset": "delta_distribution",
+        "sourceId": "cohort_pipeline",
+        "intent": "distribution",
+        "question": "Is the aggregate foresight gain broad or driven by one exceptional seed?",
+        "rationale": "Binned signed differences reveal both the broad positive shift and the single large survival outlier.",
+        "palette": {
+          "kind": "sequential",
+          "name": "foresight-delta"
+        },
+        "labels": {
+          "values": "all"
+        },
+        "encodings": {
+          "x": {
+            "field": "difference",
+            "type": "ordinal",
+            "label": "Additional lines per seed"
+          },
+          "y": {
+            "field": "seeds",
+            "type": "quantitative",
+            "label": "Seed count"
+          },
+          "tooltip": [
+            {
+              "field": "min_delta",
+              "type": "quantitative",
+              "label": "Minimum difference"
+            },
+            {
+              "field": "max_delta",
+              "type": "quantitative",
+              "label": "Maximum difference"
+            }
+          ]
+        },
+        "layout": "full"
+      }
+    ],
+    "tables": [
+      {
+        "id": "cohort_table",
+        "title": "Cohort audit",
+        "subtitle": "Exact totals behind the headline comparisons.",
+        "dataset": "cohort_summary",
+        "sourceId": "cohort_pipeline",
+        "defaultSort": {
+          "field": "experiment",
+          "direction": "asc"
+        },
+        "columns": [
+          {
+            "field": "experiment",
+            "label": "Experiment",
+            "type": "text"
+          },
+          {
+            "field": "comparison",
+            "label": "Comparison",
+            "type": "text"
+          },
+          {
+            "field": "matches",
+            "label": "Matches",
+            "format": "number"
+          },
+          {
+            "field": "winner_lines",
+            "label": "Winner lines",
+            "format": "number"
+          },
+          {
+            "field": "comparison_lines",
+            "label": "Comparator lines",
+            "format": "number"
+          },
+          {
+            "field": "illegal_moves",
+            "label": "Illegal moves",
+            "format": "number"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "id": "cohort_pipeline",
+        "label": "Deterministic Tetris cohort pipeline",
+        "path": "examples/005-agent-evidence-atlas/code/build-data.mjs",
+        "query": {
+          "engine": "sqlite",
+          "language": "sql",
+          "sql": "WITH evidence(dataset, category, metric, value) AS (\n  VALUES ('headline', 'all', 'baseline_win_rate', 1),\n         ('headline', 'all', 'line_lift', 0.04109347442680776),\n         ('headline', 'all', 'extra_lines', 233),\n         ('headline', 'all', 'extra_pieces', 163),\n         ('headline', 'all', 'illegal_moves', 0),\n         ('baseline_summary', 'Random legal', 'lines', 2),\n         ('baseline_summary', 'One-piece heuristic', 'lines', 5670),\n         ('foresight_outcomes', 'Wins', 'matches', 36),\n         ('foresight_outcomes', 'Draws', 'matches', 10),\n         ('foresight_outcomes', 'Losses', 'matches', 4),\n         ('delta_distribution', '−1 line', 'seeds', 4),\n         ('delta_distribution', 'Tie', 'seeds', 10),\n         ('delta_distribution', '+1–2', 'seeds', 9),\n         ('delta_distribution', '+3–5', 'seeds', 17),\n         ('delta_distribution', '+6–10', 'seeds', 9),\n         ('delta_distribution', '+11 or more', 'seeds', 1),\n         ('cohort_summary', '003', 'winner_lines', 5670),\n         ('cohort_summary', '003', 'comparison_lines', 2),\n         ('cohort_summary', '003', 'illegal_moves', 0),\n         ('cohort_summary', '004', 'winner_lines', 5903),\n         ('cohort_summary', '004', 'comparison_lines', 5670),\n         ('cohort_summary', '004', 'illegal_moves', 0)\n)\nSELECT dataset, category, metric, value\nFROM evidence\nORDER BY dataset, category, metric;",
+          "description": "Reproduces the reviewed evaluator snapshot as normalized chart-source rows.",
+          "executed_at": "2026-08-08T00:10:00Z",
+          "filters": [
+            "Seeds 1 through 50",
+            "300-piece ceiling per match",
+            "No sampled rows"
+          ],
+          "metric_definitions": [
+            "Line lift = (lookahead lines − greedy lines) / greedy lines across 50 matched seeds.",
+            "Win = strictly more cleared lines than the comparator on the same seeded piece stream.",
+            "Illegal placement = a selected landing that fails collision or drop-distance validation."
+          ]
+        }
+      }
+    ],
+    "blocks": [
+      {
+        "id": "thesis",
+        "type": "markdown",
+        "body": "# Agent Evidence Atlas\n\n**Intelligence should earn its adjectives.** This atlas turns the first four OPF Tetris products into a compact argument for how autonomous systems should be demonstrated."
+      },
+      {
+        "id": "headline_metrics",
+        "type": "metric-strip",
+        "cardIds": [
+          "baseline_wins",
+          "foresight_lift",
+          "survival_gain",
+          "illegal_moves"
+        ]
+      },
+      {
+        "id": "maxims",
+        "type": "markdown",
+        "body": "## Four maxims\n\n1. **Hold inputs constant.** Same seeded seven-bag streams make strategy the tested variable.\n2. **Prove legal before better.** Every agent must use ordinary actions; no teleporting and no invalid placements.\n3. **A baseline creates meaning.** Legal random play shows whether the first heuristic contributes judgment.\n4. **Expose mechanism, then measure outcome.** The depth-two agent shows its next-piece search and must still win a fixed cohort."
+      },
+      {
+        "id": "baseline_chart",
+        "type": "chart",
+        "chartId": "baseline_lines"
+      },
+      {
+        "id": "record_chart",
+        "type": "chart",
+        "chartId": "foresight_record"
+      },
+      {
+        "id": "distribution_chart",
+        "type": "chart",
+        "chartId": "delta_distribution"
+      },
+      {
+        "id": "examples",
+        "type": "markdown",
+        "body": "## See the claims behave\n\n- [003 · Same bag, different judgment](/003-tetris-ai-arena/code/) compares a legal random control with the first heuristic.\n- [004 · One move further](/004-tetris-smart-arena/code/) shows the exact moment next-piece foresight changes a decision.\n\nBoth live examples restrict each agent to at most one normal input every 100 ms."
+      },
+      {
+        "id": "audit_table",
+        "type": "table",
+        "tableId": "cohort_table"
+      },
+      {
+        "id": "method",
+        "type": "markdown",
+        "sourceId": "cohort_pipeline",
+        "body": "## Method\n\nThe snapshot reruns 100 deterministic matches: 50 random-versus-heuristic and 50 greedy-versus-lookahead, each capped at 300 offered pieces. Results are aggregate outcomes, not a claim of optimal Tetris play. The depth-two result includes 36 wins, 10 draws, and 4 losses; the losses remain visible because a stronger agent is not an infallible one."
+      }
+    ]
+  },
+  "snapshot": {
+    "version": 1,
+    "generatedAt": "2026-08-08T00:10:00Z",
+    "status": "ready",
+    "datasets": {
+      "headline": [
+        {
+          "baseline_win_rate": 1,
+          "baseline_matches": 50,
+          "line_lift": 0.04109347442680776,
+          "extra_lines": 233,
+          "extra_pieces": 163,
+          "lookahead_pieces": 15000,
+          "illegal_moves": 0,
+          "total_matches": 100
+        }
+      ],
+      "baseline_summary": [
+        {
+          "agent": "Random legal",
+          "lines": 2,
+          "pieces": 1285,
+          "wins": 0
+        },
+        {
+          "agent": "One-piece heuristic",
+          "lines": 5670,
+          "pieces": 14837,
+          "wins": 50
+        }
+      ],
+      "foresight_outcomes": [
+        {
+          "outcome": "Wins",
+          "matches": 36
+        },
+        {
+          "outcome": "Draws",
+          "matches": 10
+        },
+        {
+          "outcome": "Losses",
+          "matches": 4
+        }
+      ],
+      "delta_distribution": [
+        {
+          "difference": "−1 line",
+          "seeds": 4,
+          "min_delta": -1,
+          "max_delta": -1
+        },
+        {
+          "difference": "Tie",
+          "seeds": 10,
+          "min_delta": 0,
+          "max_delta": 0
+        },
+        {
+          "difference": "+1–2",
+          "seeds": 9,
+          "min_delta": 1,
+          "max_delta": 2
+        },
+        {
+          "difference": "+3–5",
+          "seeds": 17,
+          "min_delta": 3,
+          "max_delta": 5
+        },
+        {
+          "difference": "+6–10",
+          "seeds": 9,
+          "min_delta": 6,
+          "max_delta": 10
+        },
+        {
+          "difference": "+11 or more",
+          "seeds": 1,
+          "min_delta": 81,
+          "max_delta": 81
+        }
+      ],
+      "cohort_summary": [
+        {
+          "experiment": "003",
+          "comparison": "Heuristic vs random legal",
+          "matches": 50,
+          "winner_lines": 5670,
+          "comparison_lines": 2,
+          "illegal_moves": 0
+        },
+        {
+          "experiment": "004",
+          "comparison": "Lookahead vs greedy",
+          "matches": 50,
+          "winner_lines": 5903,
+          "comparison_lines": 5670,
+          "illegal_moves": 0
+        }
+      ]
+    }
+  },
+  "sources": [
+    {
+      "id": "cohort_pipeline",
+      "label": "Deterministic Tetris cohort pipeline",
+      "path": "examples/005-agent-evidence-atlas/code/build-data.mjs",
+      "query": {
+        "engine": "sqlite",
+        "language": "sql",
+        "sql": "WITH evidence(dataset, category, metric, value) AS (\n  VALUES ('headline', 'all', 'baseline_win_rate', 1),\n         ('headline', 'all', 'line_lift', 0.04109347442680776),\n         ('headline', 'all', 'extra_lines', 233),\n         ('headline', 'all', 'extra_pieces', 163),\n         ('headline', 'all', 'illegal_moves', 0),\n         ('baseline_summary', 'Random legal', 'lines', 2),\n         ('baseline_summary', 'One-piece heuristic', 'lines', 5670),\n         ('foresight_outcomes', 'Wins', 'matches', 36),\n         ('foresight_outcomes', 'Draws', 'matches', 10),\n         ('foresight_outcomes', 'Losses', 'matches', 4),\n         ('delta_distribution', '−1 line', 'seeds', 4),\n         ('delta_distribution', 'Tie', 'seeds', 10),\n         ('delta_distribution', '+1–2', 'seeds', 9),\n         ('delta_distribution', '+3–5', 'seeds', 17),\n         ('delta_distribution', '+6–10', 'seeds', 9),\n         ('delta_distribution', '+11 or more', 'seeds', 1),\n         ('cohort_summary', '003', 'winner_lines', 5670),\n         ('cohort_summary', '003', 'comparison_lines', 2),\n         ('cohort_summary', '003', 'illegal_moves', 0),\n         ('cohort_summary', '004', 'winner_lines', 5903),\n         ('cohort_summary', '004', 'comparison_lines', 5670),\n         ('cohort_summary', '004', 'illegal_moves', 0)\n)\nSELECT dataset, category, metric, value\nFROM evidence\nORDER BY dataset, category, metric;",
+        "description": "Reproduces the reviewed evaluator snapshot as normalized chart-source rows.",
+        "executed_at": "2026-08-08T00:10:00Z",
+        "filters": [
+          "Seeds 1 through 50",
+          "300-piece ceiling per match",
+          "No sampled rows"
+        ],
+        "metric_definitions": [
+          "Line lift = (lookahead lines − greedy lines) / greedy lines across 50 matched seeds.",
+          "Win = strictly more cleared lines than the comparator on the same seeded piece stream.",
+          "Illegal placement = a selected landing that fails collision or drop-distance validation."
+        ]
+      }
+    }
+  ],
+  "package_info": {
+    "originUrl": "https://github.com/eidos-agi/opf/tree/main/examples/005-agent-evidence-atlas",
+    "sourceKind": "deterministic-local-snapshot"
+  }
+}

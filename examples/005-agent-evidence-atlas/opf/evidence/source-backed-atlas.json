@@ -1,0 +1,17 @@
+{
+  "subject": "opf:agent-evidence-atlas:acceptance:source-backed-atlas",
+  "observed_at": "2026-08-08T00:18:58Z",
+  "method": "fresh cohort rerun, reconciliation tests, strict OPF validation, executable source query, and canonical portable packaging",
+  "source_revision": "sha256:71286171ec703f89f8daddaec70c1cd1ee797503d0fd27ccf208eb19b75b40f0",
+  "result": "passed",
+  "checks": [
+    "fresh 003 rerun reconciled 50 heuristic wins, 5670 heuristic lines, 2 random lines, and zero illegal placements",
+    "fresh 004 rerun reconciled a 36-4-10 record, 5903 lookahead lines, 5670 greedy lines, 15000 versus 14837 pieces, and zero illegal placements",
+    "three artifact tests reconciled headline metrics, executable provenance, four maxims, four cards, three charts, and one audit table",
+    "SQLite executed the embedded source query and returned 22 normalized evidence rows",
+    "strict OPF validation passed for all 15 product documents",
+    "canonical portable packaging passed validation, exact payload equality, required runtime roots, and semantic fallback checks",
+    "the self-contained HTML contains 12 blocks, 4 metrics, 3 charts, and 1 table in 428 kilobytes",
+    "enhanced browser verification remained structural-only because no compatible Chromium headless-shell was installed; this limitation is disclosed rather than promoted to visual proof"
+  ]
+}
