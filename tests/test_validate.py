@@ -93,7 +93,10 @@ class ValidatorTests(unittest.TestCase):
             face.write_text(
                 face.read_text()
                 .replace("status: shaping", "status: validated")
-                .replace("proof: [opf:eam:acceptance:decision-brief]", "proof: [opf:eam:acceptance:decision-brief]\nvalidation: [opf:eam:acceptance:decision-brief]")
+                .replace(
+                    "proof: [opf:eam:acceptance:decision-brief]",
+                    "proof: [opf:eam:acceptance:decision-brief]\nvalidation: [opf:eam:acceptance:decision-brief]",
+                )
             )
             self.assertFalse(
                 [report for report in validate_pack(root, strict=True) if report.errors]
@@ -297,7 +300,9 @@ class ValidatorTests(unittest.TestCase):
                     "applies_to: opf:eam:state:conflicting",
                 )
             )
-            self.assertIn("realization_coverage", rules(validate_pack(root, strict=True)))
+            self.assertIn(
+                "realization_coverage", rules(validate_pack(root, strict=True))
+            )
 
     def test_face_realization_cannot_point_to_a_generic_contract(self):
         with TemporaryDirectory() as directory:

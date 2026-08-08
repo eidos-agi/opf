@@ -72,6 +72,7 @@ LOCAL_REFERENCE_RE = re.compile(
 REALIZATION_FIDELITIES = {
     "intent-equivalent",
     "behaviorally-equivalent",
+    "experience-equivalent",
     "reference-faithful",
 }
 FIDELITY_DIMENSIONS = {
@@ -85,6 +86,16 @@ FIDELITY_DIMENSIONS = {
     "performance",
     "physical-form",
 }
+EXPERIENCE_QUALITIES = {
+    "operability",
+    "usability",
+    "clarity",
+    "readability",
+    "visual-cleanliness",
+    "consistency",
+    "experiential-character",
+}
+QUALITY_ASSURANCE = {"mechanical", "human", "hybrid"}
 
 # Field names are edge types. Target kinds are checked mechanically.
 EDGE_TARGET_KINDS: dict[str, set[str]] = {
@@ -98,6 +109,7 @@ EDGE_TARGET_KINDS: dict[str, set[str]] = {
     "operational_proof": {"acceptance"},
     "authority": {"authority-boundary"},
     "realization": {"contract"},
+    "experience_quality": {"contract"},
     "actor": {"user"},
     "outcome": {"outcome"},
     "journeys": {"journey"},
@@ -146,6 +158,7 @@ COMPOSITION_FIELDS = {
     "operational_proof",
     "authority",
     "realization",
+    "experience_quality",
     "journeys",
     "moments",
     "on_surface",
@@ -388,6 +401,7 @@ def _validate_face(fm: dict[str, Any], problems: list[Problem]) -> None:
             "proof",
             "authority",
             "realization",
+            "experience_quality",
         }
         for missing in _missing(fm, required):
             problems.append(
@@ -484,7 +498,11 @@ def _validate_concept(fm: dict[str, Any], problems: list[Problem]) -> None:
     if kind == "contract" and str(fm.get("contract_type") or "") == "realization":
         for missing in _missing(fm, {"applies_to", "dimensions", "fidelity", "proof"}):
             problems.append(
-                Problem("error", "realization_contract", f"realization contract requires {missing}")
+                Problem(
+                    "error",
+                    "realization_contract",
+                    f"realization contract requires {missing}",
+                )
             )
         fidelity = str(fm.get("fidelity") or "")
         if fidelity not in REALIZATION_FIDELITIES:
@@ -514,6 +532,72 @@ def _validate_concept(fm: dict[str, Any], problems: list[Problem]) -> None:
                         f"reference-faithful contract requires {missing}",
                     )
                 )
+    if (
+        kind == "contract"
+        and str(fm.get("contract_type") or "") == "experience-quality"
+    ):
+        required = {"scope", "qualities", "requirements", "assurance", "proof"}
+        for missing in _missing(fm, required):
+            problems.append(
+                Problem(
+                    "error",
+                    "experience_quality_contract",
+                    f"experience-quality contract requires {missing}",
+                )
+            )
+        if str(fm.get("scope") or "") != "product":
+            problems.append(
+                Problem("error", "experience_quality_scope", "scope must be product")
+            )
+        qualities = _items(fm.get("qualities"))
+        if set(qualities) != EXPERIENCE_QUALITIES:
+            missing = sorted(EXPERIENCE_QUALITIES - set(qualities))
+            unsupported = sorted(set(qualities) - EXPERIENCE_QUALITIES)
+            problems.append(
+                Problem(
+                    "error",
+                    "experience_quality_dimensions",
+                    f"missing {missing}; unsupported {unsupported}",
+                )
+            )
+        requirements: dict[str, str] = {}
+        malformed: list[str] = []
+        for item in _items(fm.get("requirements")):
+            dimension, separator, criterion = item.partition("=")
+            if (
+                not separator
+                or not dimension.strip()
+                or not criterion.strip()
+                or dimension in requirements
+            ):
+                malformed.append(item)
+                continue
+            requirements[dimension.strip()] = criterion.strip()
+        if set(requirements) != EXPERIENCE_QUALITIES or malformed:
+            problems.append(
+                Problem(
+                    "error",
+                    "experience_quality_requirements",
+                    f"requirements must define each quality once; malformed {malformed}",
+                )
+            )
+        assurance = str(fm.get("assurance") or "")
+        if assurance not in QUALITY_ASSURANCE:
+            problems.append(
+                Problem(
+                    "error",
+                    "experience_quality_assurance",
+                    f"assurance must be one of {sorted(QUALITY_ASSURANCE)}",
+                )
+            )
+        elif assurance == "mechanical":
+            problems.append(
+                Problem(
+                    "error",
+                    "experience_quality_human_review",
+                    "experiential-character requires human or hybrid assurance",
+                )
+            )
 
 
 def internal_references(fm: dict[str, Any]) -> list[tuple[str, str]]:
@@ -652,7 +736,11 @@ def _validate_local_evidence(
             match = LOCAL_EVIDENCE_RE.fullmatch(ref)
             if not match:
                 report_by_path[document_path].problems.append(
-                    Problem("error", "evidence_file_ref", f"invalid local evidence reference {ref}")
+                    Problem(
+                        "error",
+                        "evidence_file_ref",
+                        f"invalid local evidence reference {ref}",
+                    )
                 )
                 continue
             evidence_path = (root / match.group("path")).resolve()
@@ -660,7 +748,9 @@ def _validate_local_evidence(
                 evidence_path.relative_to((root / "evidence").resolve())
             except ValueError:
                 report_by_path[document_path].problems.append(
-                    Problem("error", "evidence_file_ref", f"evidence escapes pack: {ref}")
+                    Problem(
+                        "error", "evidence_file_ref", f"evidence escapes pack: {ref}"
+                    )
                 )
                 continue
             if not evidence_path.is_file():
@@ -671,7 +761,11 @@ def _validate_local_evidence(
             payload = evidence_path.read_bytes()
             if hashlib.sha256(payload).hexdigest() != match.group("digest"):
                 report_by_path[document_path].problems.append(
-                    Problem("error", "evidence_digest", f"digest mismatch for {match.group('path')}")
+                    Problem(
+                        "error",
+                        "evidence_digest",
+                        f"digest mismatch for {match.group('path')}",
+                    )
                 )
                 continue
             try:
@@ -682,23 +776,42 @@ def _validate_local_evidence(
             checks = receipt.get("checks") if isinstance(receipt, dict) else None
             if (
                 not isinstance(receipt, dict)
-                or any(not isinstance(receipt.get(key), str) or not receipt[key].strip() for key in required)
+                or any(
+                    not isinstance(receipt.get(key), str) or not receipt[key].strip()
+                    for key in required
+                )
                 or not isinstance(checks, list)
                 or not checks
-                or any(not isinstance(check, str) or not check.strip() for check in checks)
+                or any(
+                    not isinstance(check, str) or not check.strip() for check in checks
+                )
             ):
                 report_by_path[document_path].problems.append(
-                    Problem("error", "evidence_receipt", f"incomplete receipt {match.group('path')}")
+                    Problem(
+                        "error",
+                        "evidence_receipt",
+                        f"incomplete receipt {match.group('path')}",
+                    )
                 )
                 continue
             if receipt["subject"] != fm.get("opf_id"):
                 report_by_path[document_path].problems.append(
-                    Problem("error", "evidence_subject", f"receipt subject must be {fm.get('opf_id')}")
+                    Problem(
+                        "error",
+                        "evidence_subject",
+                        f"receipt subject must be {fm.get('opf_id')}",
+                    )
                 )
-            expected = {"observed": "passed", "failed": "failed"}.get(str(fm.get("status") or ""))
+            expected = {"observed": "passed", "failed": "failed"}.get(
+                str(fm.get("status") or "")
+            )
             if expected and receipt["result"] != expected:
                 report_by_path[document_path].problems.append(
-                    Problem("error", "evidence_result", f"status requires receipt result {expected!r}")
+                    Problem(
+                        "error",
+                        "evidence_result",
+                        f"status requires receipt result {expected!r}",
+                    )
                 )
 
 
@@ -721,7 +834,9 @@ def _validate_local_references(
                 reference_path.relative_to(reference_root)
             except ValueError:
                 report_by_path[document_path].problems.append(
-                    Problem("error", "reference_file_ref", f"reference escapes pack: {ref}")
+                    Problem(
+                        "error", "reference_file_ref", f"reference escapes pack: {ref}"
+                    )
                 )
                 continue
             if not reference_path.is_file():
@@ -729,9 +844,15 @@ def _validate_local_references(
                     Problem("error", "reference_file_missing", match.group("path"))
                 )
                 continue
-            if hashlib.sha256(reference_path.read_bytes()).hexdigest() != match.group("digest"):
+            if hashlib.sha256(reference_path.read_bytes()).hexdigest() != match.group(
+                "digest"
+            ):
                 report_by_path[document_path].problems.append(
-                    Problem("error", "reference_digest", f"digest mismatch for {match.group('path')}")
+                    Problem(
+                        "error",
+                        "reference_digest",
+                        f"digest mismatch for {match.group('path')}",
+                    )
                 )
 
 
@@ -841,6 +962,32 @@ def _validate_lifecycle(
                         f"{contract_id} must declare contract_type: realization",
                     )
                 )
+        for contract_id in _items(face_fm.get("experience_quality")):
+            contract = fm_by_id.get(contract_id, {})
+            if (
+                contract
+                and str(contract.get("contract_type") or "") != "experience-quality"
+            ):
+                report_by_path[face_path].problems.append(
+                    Problem(
+                        "error",
+                        "experience_quality_contract_type",
+                        f"{contract_id} must declare contract_type: experience-quality",
+                    )
+                )
+            if status in {"validated", "operating"} and contract:
+                proofs = _items(contract.get("proof"))
+                if not any(
+                    str(fm_by_id.get(proof, {}).get("status") or "") == "observed"
+                    for proof in proofs
+                ):
+                    report_by_path[face_path].problems.append(
+                        Problem(
+                            "error",
+                            "experience_quality_not_observed",
+                            f"{contract_id} needs observed acceptance proof",
+                        )
+                    )
         _validate_first_slice(face_fm, fm_by_id, kind_by_id, face_path, report_by_path)
     if status == "validated":
         _require_observed(face_fm, "validation", fm_by_id, face_path, report_by_path)
@@ -882,7 +1029,8 @@ def _validate_first_slice(
     realized_surfaces = {
         surface_id
         for contract_id in _items(face_fm.get("realization"))
-        if str(fm_by_id.get(contract_id, {}).get("contract_type") or "") == "realization"
+        if str(fm_by_id.get(contract_id, {}).get("contract_type") or "")
+        == "realization"
         for surface_id in _items(fm_by_id.get(contract_id, {}).get("applies_to"))
     }
     slice_ids = _items(face_fm.get("first_slice"))
@@ -1003,14 +1151,17 @@ def selftest() -> int:
         "proof": ["opf:test:acceptance"],
         "authority": ["opf:test:authority"],
         "realization": ["opf:test:contract"],
+        "experience_quality": ["opf:test:quality-contract"],
         "verified": {"by": "human:test", "method": "test"},
     }
+
     def errors(fm: dict[str, Any], face: bool = False) -> set[str]:
         return {
             problem.rule
             for problem in validate_document(fm, face=face)
             if problem.level == "error"
         }
+
     assert not errors(base, face=True)
     assert "product_admission" in errors({**base, "proof": ["TBD"]}, face=True)
     assert "version_alignment" in errors({**base, "opf_version": "0.1.9"}, face=True)
